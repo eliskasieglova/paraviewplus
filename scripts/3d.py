@@ -2,14 +2,13 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely import Point
-
-
+from shapely import Point, LineString
+import scipy.interpolate as interp
 
 class SurfacePoints:
-    def __init__(self, gdf, simulations):
+    def __init__(self, gdf, df):
         self.gdf = gdf
-        self.simulations = simulations
+        self.df = df
                  # Titles, units, and layout settings
         self.titles = {
             "Tair": "Air Temperature",
@@ -64,7 +63,7 @@ class SurfacePoints:
         points_along_line = self._slice(line)
 
         # plot based on distance from origin
-        for df in self.simulations:
+        for df in self.df:
                 
             # Merge gdf with df
             points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
@@ -110,7 +109,7 @@ class SurfacePoints:
         points_along_line = self._slice(line)
 
         # plot based on distance from origin
-        for df in self.simulations:
+        for df in self.df:
             # Merge gdf with df
             points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
             merged = pd.merge(points_along_line, df, how="left", on="cell_ID")
@@ -173,9 +172,9 @@ class SurfacePoints:
 
 
 class AirPoints:
-    def __init__(self, gdf, simulations):
+    def __init__(self, gdf, df):
         self.gdf = gdf
-        self.simulations = simulations
+        self.df = df
 
         # Titles, units, and layout settings
         self.titles = {
@@ -184,13 +183,14 @@ class AirPoints:
             "Tsurf": "Surface Temperature",
             "RelatHumid": "Relative Humidity",
             "ET": "ET",
-            "UTCI": "Felt Temperature - UTCI"
+            "UTCI": "Felt Temperature - UTCI",
         }
         self.units = {
             "Tair": "Degrees (°C)",
             "Tsurf": "Degrees (°C)",
             "RelatHumid": "Percentage (%) x 0.01",
-            "UTCI": "Degrees (°C)"
+            "UTCI": "Degrees (°C)",
+            "WindSpeed": "m/s"
         }
 
 
@@ -232,88 +232,140 @@ class AirPoints:
         points_along_line = self._slice(line, resolution)
 
         # Plot based on distance from origin
-        for df in self.simulations:
 
-            # Merge gdf with df
-            points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
-            merged = pd.merge(points_along_line, df, how="left", on="cell_ID")
 
-            # Filter data for the selected time
-            time = 1
-            subset = merged[merged["Time"] == time].sort_values("dist_from_origin").copy()
+        # Merge gdf with df
+        points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
+        merged = pd.merge(points_along_line, self.df, how="left", on="cell_ID")
 
-            # Create bounding box around the data points to cover the area with the fishnet
-            min_x, min_y, max_x, max_y = (
-                points_along_line.dist_from_origin.min(), 
-                points_along_line.geometry.z.min(), 
-                points_along_line.dist_from_origin.max(), 
-                points_along_line.geometry.z.max()
-            )
+        # Filter data for the selected time
+        time = 1
+        subset = merged[merged["Time"] == time].sort_values("dist_from_origin").copy()
 
-            # Generate a fishnet (grid of polygons) over the data area with specified resolution
-            fishnet = []
-            x_values = np.arange(min_x, max_x + resolution, resolution)
-            y_values = np.arange(min_y, max_y + resolution, resolution)
+        # Create bounding box around the data points to cover the area with the fishnet
+        min_x, min_y, max_x, max_y = (
+            points_along_line.dist_from_origin.min(), 
+            points_along_line.geometry.z.min(), 
+            points_along_line.dist_from_origin.max(), 
+            points_along_line.geometry.z.max()
+        )
 
-            from shapely.geometry import box 
+        # Generate a fishnet (grid of polygons) over the data area with specified resolution
+        fishnet = []
+        x_values = np.arange(min_x, max_x + resolution, resolution)
+        y_values = np.arange(min_y, max_y + resolution, resolution)
 
-            for x in x_values:
-                for y in y_values:
-                    cell = box(x, y, x + resolution, y + resolution)
-                    fishnet.append(cell)
+        from shapely.geometry import box 
 
-            fishnet_gdf = gpd.GeoDataFrame(geometry=fishnet, crs=points_along_line.crs)
-            # Create a GeoDataFrame where geometry is based on dist_from_origin and geometry.z
-            points_gdf = gpd.GeoDataFrame(
-                subset,
-                geometry=[Point(x, z) for x, z in zip(subset["dist_from_origin"], subset.geometry.z)],
-                crs=points_along_line.crs
-            )
+        for x in x_values:
+            for y in y_values:
+                cell = box(x, y, x + resolution, y + resolution)
+                fishnet.append(cell)
 
-            # Spatial join to match points to fishnet cells
-            joined = gpd.sjoin(points_gdf, fishnet_gdf, how='left', predicate='within')
+        fishnet_gdf = gpd.GeoDataFrame(geometry=fishnet, crs=points_along_line.crs)
+        # Create a GeoDataFrame where geometry is based on dist_from_origin and geometry.z
+        points_gdf = gpd.GeoDataFrame(
+            subset,
+            geometry=[Point(x, z) for x, z in zip(subset["dist_from_origin"], subset.geometry.z)],
+            crs=points_along_line.crs
+        )
 
-            # Check if any points were joined
-            print(joined['index_right'].isna().sum(), "points did not match any fishnet cell")
+        # Spatial join to match points to fishnet cells
+        joined = gpd.sjoin(points_gdf, fishnet_gdf, how='left', predicate='within')
 
-            # Calculate average height values (geometry.z) within each cell of the fishnet
-            fishnet_avg = joined.groupby('index_right').agg({
-                variable_name: lambda vals: np.nanmean([v for v in vals])  # Calculate mean z values
-            }).reset_index()
+        # Check if any points were joined
+        print(joined['index_right'].isna().sum(), "points did not match any fishnet cell")
 
-            fishnet_avg['index_right'] = [int(x) for x in fishnet_avg['index_right']]
+        # Calculate average height values (geometry.z) within each cell of the fishnet
+        fishnet_avg = joined.groupby('index_right').agg({
+            variable_name: lambda vals: np.nanmean([v for v in vals])  # Calculate mean z values
+        }).reset_index()
 
-            # Merge back the average heights with the fishnet
-            fishnet_gdf = pd.merge(fishnet_gdf, fishnet_avg, left_index=True, right_on='index_right', how='right')
+        fishnet_avg['index_right'] = [int(x) for x in fishnet_avg['index_right']]
 
-            # colormap
-            cmap = plt.get_cmap("Spectral_r")
+        # Merge back the average heights with the fishnet
+        fishnet_gdf = pd.merge(fishnet_gdf, fishnet_avg, left_index=True, right_on='index_right', how='right')
 
-            # Normalize the variable values for color mapping
-            min_value = fishnet_gdf[variable_name].min()
-            max_value = fishnet_gdf[variable_name].max()
-            norm = plt.Normalize(vmin=min_value, vmax=max_value)
+        # colormap
+        cmap = plt.get_cmap("Spectral_r")
 
-            # Assign colors based on variable_name using vmin and vmax for normalization
-            fishnet_gdf["color"] = [cmap((value - min_value) / (max_value - min_value)) for value in fishnet_gdf[variable_name].values]
+        # Normalize the variable values for color mapping
+        min_value = fishnet_gdf[variable_name].min()
+        max_value = fishnet_gdf[variable_name].max()
+        norm = plt.Normalize(vmin=min_value, vmax=max_value)
 
-            # Plot the fishnet grid colored by the average heights
-            plt.style.use('dark_background')
-            fig, ax = plt.subplots()
-            fishnet_gdf = fishnet_gdf.set_geometry('geometry')
-            fishnet_gdf.plot(ax=ax, color=fishnet_gdf['color'], legend=True)
+        # Assign colors based on variable_name using vmin and vmax for normalization
+        fishnet_gdf["color"] = [cmap((value - min_value) / (max_value - min_value)) for value in fishnet_gdf[variable_name].values]
 
-            # Add a colorbar to the plot
-            # Add a colorbar to the plot
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-            sm.set_array([])  # We don't need to set actual data here
-            cbar = fig.colorbar(sm, ax=ax, shrink=0.5)
-            cbar.set_label(self.units[variable_name])
+        # Plot the fishnet grid colored by the average heights
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots()
+        fishnet_gdf = fishnet_gdf.set_geometry('geometry')
+        fishnet_gdf.plot(ax=ax, color=fishnet_gdf['color'], legend=True)
 
-            # Add plot labels and title
-            plt.xlabel('Distance from Origin')
-            plt.ylabel('Height')
-            plt.title(f'Plot of {self.titles[variable_name]} using Fishnet Grid')
-            plt.show()
+        # Add a colorbar to the plot
+        # Add a colorbar to the plot
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])  # We don't need to set actual data here
+        cbar = fig.colorbar(sm, ax=ax, shrink=0.5)
+        cbar.set_label(self.units[variable_name])
+
+        # Add plot labels and title
+        plt.xlabel('Distance from Origin')
+        plt.ylabel('Height')
+        plt.title(f'Plot of {self.titles[variable_name]} using Fishnet Grid')
+        plt.show()
 
         return
+    
+    def plot_matrix(self, line, variable_name, resolution=10):
+
+        slice = self._slice(line)[["cell_ID", "geometry", "dist_from_origin"]]
+        merged = pd.merge(slice, self.df, how="left", on="cell_ID")
+
+        # Filter data for the selected time
+        time = 1
+        subset = merged[merged["Time"] == time].sort_values("dist_from_origin").copy()
+
+        # Step 2: Prepare the data for the grid
+        x = subset["dist_from_origin"].values
+        y = subset["geometry"].apply(lambda geom: geom.z if hasattr(geom, 'z') else np.nan).values
+        z = subset[variable_name].values
+
+        # Create a regular grid to interpolate the data
+        grid_x, grid_y = np.arange(x.min(), x.max(), resolution), np.arange(y.min(), y.max(), resolution)
+        grid_x, grid_y = np.meshgrid(grid_x, grid_y)
+
+        # Step 3: Interpolate the data to fill in NaN values
+        interpolated_z = interp.griddata((x, y), z, (grid_x, grid_y), method='linear')
+
+        # Step 4: Plot the matrix using a heatmap
+        plt.figure(figsize=(10, 6))
+        plt.imshow(interpolated_z, extent=(x.min(), x.max(), y.min(), y.max()), origin='lower', aspect='auto', cmap='Spectral_r')
+        plt.colorbar(label=variable_name)
+        plt.xlabel('Distance from Origin')
+        plt.ylabel('Geometry Z Value')
+        plt.title(f'Heatmap of {variable_name} values with Interpolation')
+        plt.show()
+
+
+
+
+
+surfacepoints = SurfacePoints(gpd.read_file('voxels/shp/surface_point_SHP.shp'), pd.read_csv('voxels/shp/surface_data_2021_07_15.csv'))
+airpoints = AirPoints(gpd.read_file('voxels/shp/air_point_SHP.shp'), pd.read_csv('voxels/shp/air_data_2021_07_15.csv'))
+
+
+linegeometry = LineString([(25496120, 6672150), (25496315, 6671800)])
+time = 1
+#surfacepoints.plot_slice_on_map(linegeometry)
+#airpoints.plot_slice_on_map(linegeometry)
+
+#surfacepoints.plot_slice_points(linegeometry, "Tair", time=1)
+#surfacepoints.plot_slice_lines(linegeometry, "UTCI", time=1)
+airpoints.plot_slice_fishnet(linegeometry, "WindSpeed", resolution=5)
+
+airpoints.plot_matrix(linegeometry, "WindSpeed", resolution=5)
+
+
+
