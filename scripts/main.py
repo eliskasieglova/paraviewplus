@@ -12,6 +12,54 @@ class GraphMaker:
     A class to handle loading and visualization of variables in simulation data.
     """
 
+    # Titles, units, and layout settings
+    titles = {
+        "Tair": "Air Temperature",
+        "WindSpeed": "Wind Speed",
+        "Tsurf": "Surface Temperature",
+        "RelatHumid": "Relative Humidity",
+        "ET": "ET",
+        "UTCI": "Felt Temperature - UTCI"
+    }
+    units = {
+        "Tair": "Degrees (°C)",
+        "Tsurf": "Degrees (°C)",
+        "RelatHumid": "Percentage (%) x 0.01",
+        "UTCI": "Degrees (°C)"
+    }
+    plt_layouts = {
+            "ylims": {
+                "Tair": (9, 50),
+                "Tsurf": (9, 60),
+                "UTCI": (9, 50),
+                "RelatHumid": (0, 1)
+            },
+            "yticks": {
+                "Tair": (np.arange(10, 51, step=10)),
+                "Tsurf": (np.arange(10, 51, step=10)),
+                "UTCI": (np.arange(10, 51, step=10)),
+                "RelatHumid": (np.arange(0, 1.1, step=0.1))
+            },
+            "minorticklocator": {
+                "Tair": 1,
+                "Tsurf": 1,
+                "UTCI": 1,
+                "RelatHumid": 0.05
+            },
+            "majorticklocator": {
+                "Tair": 10,
+                "Tsurf": 10,
+                "UTCI": 10,
+                "RelatHumid": 0.1
+            },
+            "note": {
+                "Tair": "air temperatures",
+                "RelatHumid": "relative humidity",
+                "Tsurf": "surface temperatures",
+                "UTCI": "felt temperatures"
+            }
+        }
+
     def __init__(self, gdf, simulations, areas_of_interest):
         """
         gdf : geopandas.GeoDataFrame
@@ -25,54 +73,6 @@ class GraphMaker:
         self.gdf = gdf 
         self.simulations = simulations 
         self.areas_of_interest = areas_of_interest 
-
-         # Titles, units, and layout settings
-        self.titles = {
-            "Tair": "Air Temperature",
-            "WindSpeed": "Wind Speed",
-            "Tsurf": "Surface Temperature",
-            "RelatHumid": "Relative Humidity",
-            "ET": "ET",
-            "UTCI": "Felt Temperature - UTCI"
-        }
-        self.units = {
-            "Tair": "Degrees (°C)",
-            "Tsurf": "Degrees (°C)",
-            "RelatHumid": "Percentage (%) x 0.01",
-            "UTCI": "Degrees (°C)"
-        }
-        self.plt_layouts = {
-                "ylims": {
-                    "Tair": (9, 50),
-                    "Tsurf": (9, 60),
-                    "UTCI": (9, 50),
-                    "RelatHumid": (0, 1)
-                },
-                "yticks": {
-                    "Tair": (np.arange(10, 51, step=10)),
-                    "Tsurf": (np.arange(10, 51, step=10)),
-                    "UTCI": (np.arange(10, 51, step=10)),
-                    "RelatHumid": (np.arange(0, 1.1, step=0.1))
-                },
-                "minorticklocator": {
-                    "Tair": 1,
-                    "Tsurf": 1,
-                    "UTCI": 1,
-                    "RelatHumid": 0.05
-                },
-                "majorticklocator": {
-                    "Tair": 10,
-                    "Tsurf": 10,
-                    "UTCI": 10,
-                    "RelatHumid": 0.1
-                },
-                "note": {
-                    "Tair": "air temperatures",
-                    "RelatHumid": "relative humidity",
-                    "Tsurf": "surface temperatures",
-                    "UTCI": "felt temperatures"
-                }
-            }
 
     def plot_areas_of_interest(self, outdir, show=True):
 
@@ -166,7 +166,7 @@ class GraphMaker:
             if show:
                 plt.show()
 
-    def build_plot(self, simulation, variable_name, colors=['blue', 'red', 'yellow', 'green'], show=False):
+    def _build_plot(self, simulation, variable_name, colors=['blue', 'red', 'yellow', 'green'], show=False):
         """
         Builds a plot of a specific variable over time for the defined areas of interest (AOIs) without displaying it.
         Prepares parameters for visualization (background grid, axis ticks and labels).
@@ -224,7 +224,7 @@ class GraphMaker:
             fig, ax = plt.subplots(figsize=(12, 6))
 
             # plot values
-            self.build_plot(simulation, variable_name, colors=colors)
+            self._build_plot(simulation, variable_name, colors=colors)
 
             # apply layouts
             self._apply_plot_layout(ax, variable_name)
@@ -257,7 +257,7 @@ class GraphMaker:
 
         for i, ax in enumerate(axs):
             plt.sca(ax)
-            self.build_plot(self.simulations[i], variable_name, colors)
+            self._build_plot(self.simulations[i], variable_name, colors)
             ax.set_title(f"Simulation {i+1}", fontsize=9)
             self._apply_plot_layout(ax, variable_name)
 
@@ -284,47 +284,48 @@ class GraphMaker:
 
         return
     
+    def plot_variable_comparison(self, variable_name, aoi, colors=None, show=True):
 
-    def plot_line_intersection(self, variable_name):
+        colors = ['red', 'blue']
+        fig, ax = plt.subplots(figsize=(12, 6))
 
-        linegeometry = LineString([(25496100, 6672050), (25496115, 6672000)])
+        # loop through simulations
+        for i, simulation in enumerate(self.simulations):
 
-        # create a small buffer around line
-        buff = linegeometry.buffer(1)
+            # plot values
+            cell_IDs = gdf[gdf.within(aoi, align=True)]["cell_ID"].values.tolist()
+            subset = simulation[simulation['cell_ID'].isin(cell_IDs)].dropna()
 
-        # plot values along line
-        points_along_line = self.gdf[self.gdf.within(buff)]
-
-        # count distance from origin
-        points_along_line["dist_from_origin"] = [Point(linegeometry.coords[0]).distance(Point(point.x, point.y)) for point in points_along_line.geometry]
-
-        # select time step
-
-        # plot based on distance from origin
-        for df in self.simulations:
+            cell_IDs = np.unique(subset['cell_ID'].values).tolist()  # reinitiate cell_IDs without nans
+            timesteps = np.unique(subset.Time.values).tolist()  # get time steps
+            avg_values = np.mean([subset[subset['cell_ID'] == id][variable_name].values for id in cell_IDs], axis=0)
             
-            # merge gdf with df
-            points_along_line = pd.merge(points_along_line, df, how="left", on="cell_ID")
+            plt.plot(timesteps, avg_values, c=colors[i])
 
-            # plot the data
-            time = 1
-            subset = points_along_line[points_along_line["Time"] == time].sort_values("dist_from_origin")
-            plt.plot(subset["dist_from_origin"], subset["Tair"])
+        # apply layouts
+        self._apply_plot_layout(ax, variable_name)
+        self._plot_legend(ax)
+        if variable_name == "UTCI":
+            self._apply_utci_background(ax)
+        #self._plot_note_text(variable_name)
+        plt.title(self.titles[variable_name], fontsize=18, fontweight='bold', y=1.1)
+        plt.subplots_adjust(top=0.85, bottom=0.2)
 
-
-
+        if show:
             plt.show()
 
-        return
-    
+            return
+        
 
 gdf = gpd.read_file('voxels/shp/surface_point_SHP.shp')
 df = pd.read_csv('voxels/shp/surface_data_2021_07_15.csv')
 
+#gdf = gpd.read_file('voxels/shp/air_point_SHP.shp')
+#df = pd.read_csv('voxels/shp/air_data_2021_07_15.csv')
+
 df2 = df.copy()
 df2["Tair"] = [x + 2 for x in df["Tair"].values]
-df2["Tsurf"] = [x + 2 for x in df["Tsurf"].values]
-df2["UTCI"] = [x + 5 for x in df["UTCI"].values]
+df2["UTCI"] = [x + 2 for x in df["UTCI"].values]
 
 aoi1 = Polygon(((25496100, 6672050), (25496115, 6672000), (25496215, 6672070), (25496190, 6672100), (25496100, 6672050)))
 aoi2 = Polygon(((25496200, 6672050), (25496215, 6672000), (25496315, 6672070), (25496290, 6672100), (25496200, 6672050)))
@@ -336,8 +337,27 @@ simulations = [df, df2]
 
 graphmaker = GraphMaker(gdf, simulations, areas_of_interest)
 
+graphmaker.plot_variable_comparison("UTCI", aoi1)
+
 #graphmaker.plot_single_point(1, "Tair", outdir="voxels/figs")
 #graphmaker.plot_single_simulation("UTCI", outdir="voxels/figs", show=True)
 #graphmaker.plot_simulation_comparison("UTCI", outdir="voxels/figs", layout="horizontal", show=True)
 #graphmaker.plot_areas_of_interest(outdir="voxels/figs", show=True)
+
+
+surfacepoints = SurfacePoints(gpd.read_file('voxels/shp/surface_point_SHP.shp'), [pd.read_csv('voxels/shp/surface_data_2021_07_15.csv')])
+airpoints = AirPoints(gpd.read_file('voxels/shp/air_point_SHP.shp'), [pd.read_csv('voxels/shp/surface_data_2021_07_15.csv')])
+
+
+linegeometry = LineString([(25496120, 6672150), (25496315, 6671800)])
+time = 1
+#surfacepoints.plot_slice_on_map(linegeometry)
+#airpoints.plot_slice_on_map(linegeometry)
+
+#surfacepoints.plot_slice_points(linegeometry, "Tair", time=1)
+#surfacepoints.plot_slice_lines(linegeometry, "UTCI", time=1)
+#airpoints.plot_slice_fishnet(linegeometry, "Tair", resolution=10)
+
+
+
 
