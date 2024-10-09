@@ -341,3 +341,15 @@ graphmaker = GraphMaker(gdf, simulations, areas_of_interest)
 #graphmaker.plot_simulation_comparison("UTCI", outdir="voxels/figs", layout="horizontal", show=True)
 #graphmaker.plot_areas_of_interest(outdir="voxels/figs", show=True)
 
+
+
+
+
+
+
+
+
+
+
+
+
