@@ -4,7 +4,6 @@ from shapely import LineString, Polygon
 import matplotlib.pyplot as plt
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
-from graphmaker import GraphMaker
 from basepoints import BasePoints
 from surfacepoints import SurfacePoints
 from airpoints import AirPoints
@@ -12,6 +11,9 @@ from airpoints import AirPoints
 
 def main():      
     
+    gdf = gpd.read_file("paraviewplus/SHP/surface_point_SHP.shp")
+    df = pd.read_csv("paraviewplus/SHP/surface_data_2021_07_15.csv")
+
     df2 = df.copy()
     df2["Tair"] = [x + 2 for x in df["Tair"].values]
     df2["UTCI"] = [x + 2 for x in df["UTCI"].values]
@@ -24,30 +26,31 @@ def main():
     areas_of_interest = [aoi1, aoi2, aoi3, aoi4]
     simulations = [df, df2]
 
-    graphmaker = GraphMaker(gdf, simulations, areas_of_interest)
+    graphmaker = BasePoints(gdf, df)
 
-    graphmaker.plot_variable_comparison("UTCI", aoi1)
+    #graphmaker.plot_single_point("Tair", outdir="paraviewplus/figs", show=True, cell_ID=1)
 
-    #graphmaker.plot_single_point(1, "Tair", outdir="voxels/figs")
-    #graphmaker.plot_single_simulation("UTCI", outdir="voxels/figs", show=True)
-    #graphmaker.plot_simulation_comparison("UTCI", outdir="voxels/figs", layout="horizontal", show=True)
-    #graphmaker.plot_areas_of_interest(outdir="voxels/figs", show=True)
+    #graphmaker.plot_variable_comparison(df2, "UTCI", areas_of_interest)
 
-    surfacepoints = SurfacePoints(gpd.read_file('voxels/shp/surface_point_SHP.shp'), pd.read_csv('voxels/shp/surface_data_2021_07_15.csv'))
-    airpoints = AirPoints(gpd.read_file('voxels/shp/air_point_SHP.shp'), pd.read_csv('voxels/shp/air_data_2021_07_15.csv'))
+    #graphmaker.plot_single_simulation("UTCI", areas_of_interest, outdir="paraviewplus/figs", show=True)
+    #graphmaker.plot_areas_of_interest(aois=areas_of_interest, outdir="paraviewplus/figs", show=True)
 
+    surfacepoints = SurfacePoints(gpd.read_file('paraviewplus/shp/surface_point_SHP.shp'), pd.read_csv('paraviewplus/shp/surface_data_2021_07_15.csv'))
+    airpoints = AirPoints(gpd.read_file('paraviewplus/shp/air_point_SHP.shp'), pd.read_csv('paraviewplus/shp/air_data_2021_07_15.csv'))
 
     linegeometry = LineString([(25496120, 6672150), (25496315, 6671800)])
     time = 1
     #surfacepoints.plot_slice_on_map(linegeometry)
     #airpoints.plot_slice_on_map(linegeometry)
-    #airpoints.plot_points_3d()
-    #airpoints.plot_slice_3d(linegeometry)
+    #surfacepoints.plot_points_3d(colorby="Tair")
+    #surfacepoints.plot_slice_3d(linegeometry)
 
-    airpoints.plot_streamplot(1, gpd.read_file("voxels/shp/surface_triangle_SHP.shp"), dims=2)
-    #airpoints.plot_flow(1, gpd.read_file("voxels/shp/surface_triangle_SHP.shp"))
+    #airpoints.plot_streamplot(1, gpd.read_file("paraviewplus/shp/surface_triangle_SHP.shp"), dims=2)
+    
+    #airpoints.plot_flow(1, gpd.read_file("paraviewplus/shp/surface_triangle_SHP.shp"))
 
-    #airpoints._remove_buildings(gpd.read_file("voxels/shp/surface_point_SHP.shp"))
+    
+    #airpoints._remove_buildings(gpd.read_file("paraviewplus/shp/surface_point_SHP.shp"))
 
     #surfacepoints.plot_slice_points(linegeometry, "Tair", time=1)
     #surfacepoints.plot_slice_lines(linegeometry, "UTCI", time=1)

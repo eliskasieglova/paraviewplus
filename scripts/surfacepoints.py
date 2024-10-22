@@ -7,7 +7,7 @@ plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
 from basepoints import BasePoints
 
-class SurfacePoints:
+class SurfacePoints(BasePoints):
     def __init__(self, gdf, df):
         super().__init__(gdf, df)
 

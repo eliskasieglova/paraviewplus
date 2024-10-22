@@ -5,72 +5,13 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from shapely import Point
 import scipy.interpolate as interp
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
+from basepoints import BasePoints
 
-
-class AirPoints:
+class AirPoints(BasePoints):
     def __init__(self, gdf, df):
         super().__init__(gdf, df)
-
-    def plot_slice_3d(self, slice, show=True, variable_name=None):
-        """
-        Plots a 3D scatterplot of air points and a slice surface. Colors the points by variable if selected.
-
-        Params:
-        -------
-        - slice
-            Slice (shapely LineString)
-        - show
-            boolean, shows plot if true
-        - variable_name
-            specify variable if you want to color the air points by variable
-        
-        Returns:
-        --------
-        Shows a matplotlib plot if show==True, saves plot as figure to folder 'figs/'.
-        """
-
-        fig = plt.figure()
-        ax = fig.add_subplot(projection='3d')
-
-        if variable_name is not None:
-            data = pd.merge(self.gdf[["cell_ID"]], self.df)
-            data = data[data["Time"] == 1]
-
-        sc = ax.scatter(self.gdf.geometry.x, self.gdf.geometry.y, self.gdf.geometry.z, s=1, c=data[variable_name] if variable_name is not None else 'black',
-                        cmap="Spectral_r")
-
-        # plot 3d slice
-        slice_2d = gpd.GeoSeries([slice]) 
-        slice_coords = list(slice.coords) 
-        polygon_vertices = []
-
-        # Create the bottom face of the polygon (min_z)
-        for x, y in slice_coords:
-            polygon_vertices.append((x, y, 0))
-
-        # Create the top face of the polygon (max_z)
-        for x, y in reversed(slice_coords):
-            polygon_vertices.append((x, y, max(self.gdf.geometry.z)))
-
-        # Plot the polygon as a vertical surface using Poly3DCollection
-        poly = Poly3DCollection([polygon_vertices], color='red', alpha=0.3)
-        ax.add_collection3d(poly)
-
-        # Add a colorbar to the plot
-        if variable_name is not None:
-            cbar = plt.colorbar(sc, ax=ax)
-            cbar.set_label(self.units[variable_name])  
-
-        # Set title
-        plt.title('Air Points' if variable_name is None else f"{self.titles[variable_name]} of Air Points")
-
-        # Save figure, show if selected
-        plt.savefig("figs/3dslice.png")
-        if show:
-            plt.show()
 
     def plot_slice_fishnet(self, line, variable_name, resolution=10):
 
