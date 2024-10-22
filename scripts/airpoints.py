@@ -7,9 +7,9 @@ from shapely import Point
 import scipy.interpolate as interp
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
-from basepoints import BasePoints
+from datapoints import DataPoints
 
-class AirPoints(BasePoints):
+class AirPoints(DataPoints):
     def __init__(self, gdf, df):
         super().__init__(gdf, df)
 

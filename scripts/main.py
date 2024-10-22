@@ -4,7 +4,7 @@ from shapely import LineString, Polygon
 import matplotlib.pyplot as plt
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
-from basepoints import BasePoints
+from datapoints import DataPoints
 from surfacepoints import SurfacePoints
 from airpoints import AirPoints
 
@@ -26,7 +26,7 @@ def main():
     areas_of_interest = [aoi1, aoi2, aoi3, aoi4]
     simulations = [df, df2]
 
-    graphmaker = BasePoints(gdf, df)
+    #graphmaker = DataPoints(gdf, df)
 
     #graphmaker.plot_single_point("Tair", outdir="paraviewplus/figs", show=True, cell_ID=1)
 
@@ -35,11 +35,15 @@ def main():
     #graphmaker.plot_single_simulation("UTCI", areas_of_interest, outdir="paraviewplus/figs", show=True)
     #graphmaker.plot_areas_of_interest(aois=areas_of_interest, outdir="paraviewplus/figs", show=True)
 
-    surfacepoints = SurfacePoints(gpd.read_file('paraviewplus/shp/surface_point_SHP.shp'), pd.read_csv('paraviewplus/shp/surface_data_2021_07_15.csv'))
-    airpoints = AirPoints(gpd.read_file('paraviewplus/shp/air_point_SHP.shp'), pd.read_csv('paraviewplus/shp/air_data_2021_07_15.csv'))
+    surfacepoints = SurfacePoints(gdf=gdf, df=df, aois=[aoi1, aoi2], output_folder="paraviewplus/figs")
+    surfacepoints.compare_simulations(df2=df2, df3=df2, variable_names=["Tair", "UTCI"])
 
-    linegeometry = LineString([(25496120, 6672150), (25496315, 6671800)])
-    time = 1
+
+
+    #airpoints = AirPoints(gpd.read_file('paraviewplus/shp/air_point_SHP.shp'), pd.read_csv('paraviewplus/shp/air_data_2021_07_15.csv'))
+
+    #linegeometry = LineString([(25496120, 6672150), (25496315, 6671800)])
+    #time = 1
     #surfacepoints.plot_slice_on_map(linegeometry)
     #airpoints.plot_slice_on_map(linegeometry)
     #surfacepoints.plot_points_3d(colorby="Tair")
@@ -48,8 +52,6 @@ def main():
     #airpoints.plot_streamplot(1, gpd.read_file("paraviewplus/shp/surface_triangle_SHP.shp"), dims=2)
     
     #airpoints.plot_flow(1, gpd.read_file("paraviewplus/shp/surface_triangle_SHP.shp"))
-
-    
     #airpoints._remove_buildings(gpd.read_file("paraviewplus/shp/surface_point_SHP.shp"))
 
     #surfacepoints.plot_slice_points(linegeometry, "Tair", time=1)
