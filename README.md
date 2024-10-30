@@ -8,7 +8,31 @@ Example data can be found in the data/ folder. Some examples of plots are in Exa
 ## Time Series Demonstration for Simulation Results
 ![image](https://github.com/user-attachments/assets/343e90dd-81de-4f74-a5b4-964a92e51fb7)
 
+- class TimeSeriesDemonstration in scripts/TimeSeriesDemonstration.py
 
+- inputs:
+-   surfpoints (data/surface_point_shp.shp)
+-   surfdata (data/surface_data_2021_07_15.csv)
+-   airpoints (data/air_point_shp.shp)
+-   airdata (data/air_data_2021_07_15.csv)
+-   surfmesh (data/surface_triangles_shp.shp)
+
+**run:**
+```
+    tsd = TimeSeriesDemonstration(
+        surfpoints=gpd.read_file("data/surface_point_SHP.shp"),
+        airpoints=gpd.read_file("data/air_point_SHP.shp"),
+        surfmesh=gpd.read_file("data/surface_triangle_SHP.shp"),
+        surfdata=pd.read_csv("data/surface_data_2021_07_15.csv"),
+        airdata=pd.read_csv("data/air_data_2021_07_15.csv"),
+    )
+
+    tsd.run()
+```
+
+**Notes**
+airdata is too big for uploading on github. message and i will share through google drive. or just run ferda. but this script will not work without it (plotting windspeed).
+todo: specify output folder for saving pngs instead of showing the plots.
 
 
 
