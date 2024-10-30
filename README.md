@@ -30,9 +30,14 @@ Example data can be found in the data/ folder. Some examples of plots are in Exa
     tsd.run()
 ```
 
-**Notes**
+**Notes**:
+
 airdata is too big for uploading on github. message and i will share through google drive. or just run ferda. but this script will not work without it (plotting windspeed).
-todo: specify output folder for saving pngs instead of showing the plots.
+todo: specify output folder for saving pngs instead of showing the plots; specify variables for plotting (default are air temp, relative humidity, wind speed and utci felt temperature).
+
+**Result**:
+
+![image](https://github.com/user-attachments/assets/d8721abc-3745-4d18-87d4-518ed269ce20)
 
 
 
