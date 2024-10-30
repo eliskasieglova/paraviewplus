@@ -41,7 +41,7 @@ gdf['height'] = gdf.geometry.apply(
 )
 
 # plot the surfacemesh and color it by height
-sc = gdf.plot(column='height')
+gdf.plot(column='height', legend=True, legend_kwds={"label": "Height (m)"})
 
 # style the plot
 plt.axis('equal')
