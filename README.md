@@ -3,6 +3,7 @@
 ### Plot Surface Points
 
 ```
+import matplotlib.pyplot as plt
 import geopandas as gpd
 
 # load shapefile
@@ -29,6 +30,7 @@ plt.show()
 # Plot Surface Mesh
 
 ```
+import matplotlib.pyplot as plt
 import geopandas as gpd
 import numpy as np
 
@@ -56,7 +58,44 @@ plt.show()
 
 
 
-# Plot Areas of Interest
+# Plot Areas of Interest (above surface points)
+
+```
+import matplotlib.pyplot as plt
+import geopandas as gpd
+
+# load shapefile
+gdf = gpd.read_file("surface_point_SHP.shp")  # path to shapefile surface points
+
+# create areas of interest
+aoi1 = Polygon(((25496100, 6672050), (25496115, 6672000), (25496215, 6672070), (25496190, 6672100), (25496100, 6672050)))
+aoi2 = Polygon(((25496200, 6672050), (25496215, 6672000), (25496315, 6672070), (25496290, 6672100), (25496200, 6672050)))
+aoi3 = Polygon(((25496100, 6671900), (25496170, 6671800), (25496200, 6671820), (25496160, 6671900), (25496100, 6671900)))
+aoi4 = Polygon(((25496200, 6671950), (25496220, 6671850), (25496300, 6671820), (25496260, 6671950), (25496200, 6671950)))
+
+# assign height column to the geodataframe
+gdf["height"] = gdf.geometry.z.values
+
+# plot the points (and color by height)
+ax = gdf.plot(column="height", cmap="Spectral_r", legend=True, markersize=1)
+
+for aoi in [aoi1, aoi2, aoi3, aoi4]:
+    aoi = gpd.GeoSeries(aoi)
+    aoi.plot(ax=ax, color='lightgrey', alpha=0.8, edgecolor='black', linewidth=2)
+
+# style plot
+plt.axis('equal')
+plt.title("Scatterplot of surface points colored by height (with areas of interest)")
+plt.xlabel("longitude")
+plt.ylabel("latitude")
+
+plt.show()
+```
+![image](https://github.com/user-attachments/assets/4eb19026-87a3-41de-9e9c-82f6f20363df)
+
+
+
+
 
 
 
