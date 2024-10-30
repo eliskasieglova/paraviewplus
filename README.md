@@ -35,7 +35,7 @@ import geopandas as gpd
 import numpy as np
 
 # load shapefile
-gdf = gpd.read_file("surface_triangles_SHP.shp")  # path to shapefile surface points
+gdf = gpd.read_file("surface_triangle_SHP.shp")  # path to shapefile surface points
 
 # create new height column
 gdf['height'] = gdf.geometry.apply(
@@ -90,6 +90,43 @@ plt.show()
 ![image](https://github.com/user-attachments/assets/4eb19026-87a3-41de-9e9c-82f6f20363df)
 
 ### Plot Areas of Interest (above surface mesh)
+```
+import matplotlib.pyplot as plt
+import geopandas as gpd
+
+# load shapefile
+gdf = gpd.read_file("surface_triangle_SHP.shp")  # path to shapefile surface points
+
+# create areas of interest
+aoi1 = Polygon(((25496100, 6672050), (25496115, 6672000), (25496215, 6672070), (25496190, 6672100), (25496100, 6672050)))
+aoi2 = Polygon(((25496200, 6672050), (25496215, 6672000), (25496315, 6672070), (25496290, 6672100), (25496200, 6672050)))
+aoi3 = Polygon(((25496100, 6671900), (25496170, 6671800), (25496200, 6671820), (25496160, 6671900), (25496100, 6671900)))
+aoi4 = Polygon(((25496200, 6671950), (25496220, 6671850), (25496300, 6671820), (25496260, 6671950), (25496200, 6671950)))
+
+# create new height column
+gdf['height'] = gdf.geometry.apply(
+    lambda geom: np.mean([coord[2] for coord in geom.exterior.coords if len(coord) == 3])
+)
+
+# plot the surface mesh
+ax = gdf.plot(column="height", cmap="Spectral_r", legend=True, markersize=1)
+
+# plot the areas of interest
+for aoi in [aoi1, aoi2, aoi3, aoi4]:
+    aoi = gpd.GeoSeries(aoi)
+    aoi.plot(ax=ax, color='lightgrey', alpha=0.8, edgecolor='black', linewidth=2)
+
+# style plot
+plt.axis('equal')
+plt.title("Scatterplot of surface mesh colored by height (with areas of interest)")
+plt.xlabel("longitude")
+plt.ylabel("latitude")
+
+plt.show()
+
+```
+![image](https://github.com/user-attachments/assets/874b0885-0316-42d2-99a5-698e7a1937ff)
+
 
 
 
