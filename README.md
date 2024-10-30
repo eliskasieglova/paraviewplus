@@ -27,7 +27,7 @@ plt.show()
 
 ![image](https://github.com/user-attachments/assets/399e3c90-6344-46a8-afb2-8b4652ede2dd)
 
-# Plot Surface Mesh
+### Plot Surface Mesh
 
 ```
 import matplotlib.pyplot as plt
@@ -35,7 +35,7 @@ import geopandas as gpd
 import numpy as np
 
 # load shapefile
-gdf = gpd.read_file("surface_point_SHP.shp")  # path to shapefile surface points
+gdf = gpd.read_file("surface_triangles_SHP.shp")  # path to shapefile surface points
 
 # create new height column
 gdf['height'] = gdf.geometry.apply(
@@ -53,13 +53,9 @@ plt.ylabel("latitude")
 
 plt.show()
 ```
-
 ![image](https://github.com/user-attachments/assets/e7557da4-518c-4c16-9ccf-a20da1ca956c)
 
-
-
-# Plot Areas of Interest (above surface points)
-
+### Plot Areas of Interest (above surface points)
 ```
 import matplotlib.pyplot as plt
 import geopandas as gpd
@@ -92,6 +88,8 @@ plt.ylabel("latitude")
 plt.show()
 ```
 ![image](https://github.com/user-attachments/assets/4eb19026-87a3-41de-9e9c-82f6f20363df)
+
+### Plot Areas of Interest (above surface mesh)
 
 
 
