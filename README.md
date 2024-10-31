@@ -1,9 +1,27 @@
-# Paraview++
+# About
 
 This code is meant to automate the generation of plots, maps, slices and 3d models for urban planning. Written in Python, main visualization library used is matplotlib.
 
 Example data can be found in the data/ folder. Some examples of plots are in Examples.md.
 
+
+# Files 
+- inputs.py (for handling input data types)
+- graphmaker.py (creating plots)
+- main.py
+
+### inputs.py
+- AirPoints --> functions for handling air points shapefile
+- SurfacePoints --> functions for handling surface points shp
+- SurfaceMesh --> functions for hangling surface triangles shp
+
+### graphmaker.py
+- TimeSeriesDemonstration --> creates plot with subplots for each selected variable, plots the selected variables for each time step (1 png for each timestep. the subplots are maps colored by the selected variable)
+- SimulationResults --> creates average of selected variable for selected areas of interest (x-axis = time, y-axis = selected variable)
+- SimulationComparison --> creates plot comparing new vs. existing design. creates plot for each selected variable and aoi.
+- UTCICategory --> plots time series of selected UTCI category (only the selected category is shown on map). creates one figure for each timestep.
+
+# Examples
 
 ## Time Series Demonstration for Simulation Results
 ![image](https://github.com/user-attachments/assets/343e90dd-81de-4f74-a5b4-964a92e51fb7)
