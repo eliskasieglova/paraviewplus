@@ -21,6 +21,7 @@ Example data can be found in the data/ folder. Some examples of plots are in Exa
 - [SimulationComparison](#simulation-comparison) --> creates plot comparing new vs. existing design. creates plot for each selected variable and aoi.
 - [UTCICategory](#utci_category) --> plots time series of selected UTCI category (only the selected category is shown on map). creates one figure for each timestep.
 - [AOIsOnMap](#map-of-areas-of-interest) --> plots polygons of areas of interest over map (either point map or mesh)
+- [Windrose](#windrose) --> plots wind rose (wind directions and wind speeds of the whole area)
 
   
 # Examples
@@ -195,6 +196,22 @@ Plots maps of selected UTCI category for each timestep. Generates 1 png per each
 ![image](https://github.com/user-attachments/assets/43638ca7-3422-41b6-a62e-189c47e453b0) ![image](https://github.com/user-attachments/assets/ecb80717-3753-48aa-9b2b-93a494c8ed5e)
 
 
+## Windrose
+
+```
+    # WINDROSE
+    wr = Windrose(airpoints, airdata)
+
+    # set output folder to save output (will be possible in all plotting functions soon)
+    wr.set_output_folder(output_folder)
+
+    # run
+    wr.run()
+```
+
+**Result**:
+
+![image](https://github.com/user-attachments/assets/bb02547c-8433-416e-953c-f8e72de6000e)
 
 
 
