@@ -9,6 +9,23 @@ from surfacemesh import SurfaceMesh
 from datapoints import DataPoints
 
 class TimeSeriesDemonstration(SurfaceMesh, DataPoints):
+    """
+    A class to visualize time-series simulation data on a 2D mesh, specifically for
+    surface and air properties across multiple variables.
+    
+    Attributes
+    ----------
+    surfpoints : gpd.GeoDataFrame
+        Geospatial points of the surface. (Ferda folder: surface_point_shp.shp)
+    surfdata : pd.DataFrame
+        Data associated with the surface points. (Ferda folder: surface_data_2021_07_15.csv)
+    airpoints : gpd.GeoDataFrame
+        Geospatial air points. (Ferda folder: air_point_shp.shp)
+    airdata : pd.DataFrame
+        Data associated with the air points. (Ferda folder: air_data_2021_07_15.csv)
+    surfmesh : gpd.GeoDataFrame
+        Surface mesh. (Ferda folder: surface_triangle_shp.shp)
+    """
 
     def __init__(self, surfpoints, surfdata, airpoints, airdata, surfmesh) -> None:
 
@@ -18,6 +35,7 @@ class TimeSeriesDemonstration(SurfaceMesh, DataPoints):
         self.airdata = airdata
         self.surfmesh = surfmesh
 
+        # creates walls and rooftops dataframes for plotting
         self.walls, self.rooftops = self._walls_rooftops()
 
     
@@ -32,6 +50,18 @@ class TimeSeriesDemonstration(SurfaceMesh, DataPoints):
         return walls, rooftops
 
     def _layout_time_series_sim(self, fig, ax, contour, levels, ticks, variable_name):
+        """ 
+        Separate function for creating the layout for the plot. 
+        
+        Params:
+        -------
+        - fig: plt.Figure (current figure)
+        - ax: plt.Axes (current axis)
+        - contour: the contour plot (for creating the colorbar)
+        - levels: the levels for contour plotting (categories/bins)
+        - ticks: the ticks to show in the colorbar (not the same as levels)
+        - variable_name: str (to set title)
+        """
 
         # Add a horizontal colorbar below the plot
         cax = ax.inset_axes([0.65, -0.05, 0.4, 0.02]) 
@@ -51,6 +81,17 @@ class TimeSeriesDemonstration(SurfaceMesh, DataPoints):
         return
     
     def _plot_time_series_sim(self, fig, ax, variable_name, cmap, time):
+        """
+        Plots one subplot of the time series simulation based on the inputs.
+
+        Params:
+        ------
+        - fig: plt.Figure (current figure)
+        - ax: plt.Axes (current axis)
+        - variable_name: current variable
+        - cmap: selected colormap from the matplotlib defined colormaps
+        - time: current timestep
+        """
 
         if variable_name in self.surfdata.columns:
             merged = gpd.GeoDataFrame(pd.merge(self.surfdata, self.surfpoints[["cell_ID", "geometry"]])).dropna()
@@ -91,11 +132,22 @@ class TimeSeriesDemonstration(SurfaceMesh, DataPoints):
         return
 
     def run(self, var1=("Tair", "coolwarm"), var2=("RelatHumid", "Purples"), var3=("WindSpeed", "Blues"), var4=("UTCI", ListedColormap(['green', 'orange', 'orangered', 'red', 'darkred']))):
+        """
+        Runs the visualization for each timestep in the surface data, plotting
+        multiple variables in a 2x2 subplot layout.
 
+        Parameters
+        ----------
+        var1, var2, var3, var4 : tuple
+            Each variable tuple contains the variable name and colormap to use for plotting.
+        """
+        # get the timesteps in the data
         for time in self.get_timesteps(df=self.surfdata):
-        
+
+            # create figure layout
             fig, axs = plt.subplots(2, 2, figsize=(9, 9))
 
+            # plot selected variables
             for i, v in enumerate([var1, var2, var3, var4]):
                 name = v[0]
                 cmap = v[1]
