@@ -191,7 +191,8 @@ Plots maps of selected UTCI category for each timestep. Generates 1 png per each
 
 
 **Result**:
-![image](https://github.com/user-attachments/assets/43638ca7-3422-41b6-a62e-189c47e453b0) ![image](https://github.com/user-attachments/assets/ecb80717-3753-48aa-9b2b-93a494c8ed5e)
+
+![image](https://github.com/user-attachments/assets/43638ca7-3422-41b6-a62e-189c47e453b0 | width=100) ![image](https://github.com/user-attachments/assets/ecb80717-3753-48aa-9b2b-93a494c8ed5e | width=100)
 
 
 
