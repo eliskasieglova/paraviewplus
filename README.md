@@ -16,7 +16,7 @@ Example data can be found in the data/ folder. Some examples of plots are in Exa
 - SurfaceMesh --> functions for hangling surface triangles shp
 
 ### graphmaker.py
-- TimeSeriesDemonstration --> creates plot with subplots for each selected variable, plots the selected variables for each time step (1 png for each timestep. the subplots are maps colored by the selected variable)
+- [TimeSeriesDemonstration](#time-series-demonstration-for-simulation-results) --> creates plot with subplots for each selected variable, plots the selected variables for each time step (1 png for each timestep. the subplots are maps colored by the selected variable)
 - SimulationResults --> creates average of selected variable for selected areas of interest (x-axis = time, y-axis = selected variable)
 - SimulationComparison --> creates plot comparing new vs. existing design. creates plot for each selected variable and aoi.
 - UTCICategory --> plots time series of selected UTCI category (only the selected category is shown on map). creates one figure for each timestep.
