@@ -20,7 +20,9 @@ Example data can be found in the data/ folder. Some examples of plots are in Exa
 - [SimulationResults](#simulation-results) --> creates average of selected variable for selected areas of interest (x-axis = time, y-axis = selected variable)
 - [SimulationComparison](#simulation-comparison) --> creates plot comparing new vs. existing design. creates plot for each selected variable and aoi.
 - [UTCICategory](#utci_category) --> plots time series of selected UTCI category (only the selected category is shown on map). creates one figure for each timestep.
+- [AOIsOnMap](#map-of-areas-of-interest) --> plots polygons of areas of interest over map (either point map or mesh)
 
+  
 # Examples
 
 ## Time Series Demonstration for Simulation Results
@@ -163,6 +165,34 @@ Plots maps of selected UTCI category for each timestep. Generates 1 png per each
 **Result**:
 
 ![image](https://github.com/user-attachments/assets/81c41959-94ad-4db7-af8d-f64a8826393c)
+
+
+## Map of Areas of Interest
+
+
+```
+    # PLOT AREAS OF INTEREST ABOVE MAP
+    aoimap = AOIsOnMap(surfpoints, surfdata, surfmesh)
+
+    # add aois
+    aoimap.add_area_of_interest(aoi1)
+    aoimap.add_area_of_interest(aoi2)
+    aoimap.add_area_of_interest(aoi3)
+    aoimap.add_area_of_interest(aoi4)
+
+    aoimap.set_output_folder(output_folder)
+    # run with point map underneath
+    aoimap.run()
+
+    # run with mesh underneath
+    aoimap.set_plot_type("mesh")
+    aoimap.run()
+```
+
+
+**Result**:
+![image](https://github.com/user-attachments/assets/43638ca7-3422-41b6-a62e-189c47e453b0)
+
 
 
 
