@@ -24,7 +24,7 @@ Example data can be found in the data/ folder. Some examples of plots are in Exa
 # Examples
 
 ## Time Series Demonstration for Simulation Results
-<img src="https://github.com/user-attachments/assets/343e90dd-81de-4f74-a5b4-964a92e51fb7" style="border: 2px solid grey;")>
+![image](https://github.com/user-attachments/assets/343e90dd-81de-4f74-a5b4-964a92e51fb7)
 
 - class TimeSeriesDemonstration in scripts/inputs.py
 
