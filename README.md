@@ -17,9 +17,9 @@ Example data can be found in the data/ folder. Some examples of plots are in Exa
 
 ### graphmaker.py
 - [TimeSeriesDemonstration](#time-series-demonstration-for-simulation-results) --> creates plot with subplots for each selected variable, plots the selected variables for each time step (1 png for each timestep. the subplots are maps colored by the selected variable)
-- SimulationResults --> creates average of selected variable for selected areas of interest (x-axis = time, y-axis = selected variable)
-- SimulationComparison --> creates plot comparing new vs. existing design. creates plot for each selected variable and aoi.
-- UTCICategory --> plots time series of selected UTCI category (only the selected category is shown on map). creates one figure for each timestep.
+- [SimulationResults](#simulation-results) --> creates average of selected variable for selected areas of interest (x-axis = time, y-axis = selected variable)
+- [SimulationComparison](#simulation-comparison) --> creates plot comparing new vs. existing design. creates plot for each selected variable and aoi.
+- [UTCICategory](#utci_category) --> plots time series of selected UTCI category (only the selected category is shown on map). creates one figure for each timestep.
 
 # Examples
 
@@ -57,5 +57,12 @@ todo: specify output folder for saving pngs instead of showing the plots; specif
 
 ![image](https://github.com/user-attachments/assets/d8721abc-3745-4d18-87d4-518ed269ce20)
 
+## Simulation Results
+
+
+## Simulation Comparison
+
+
+## UTCI Category
 
 
