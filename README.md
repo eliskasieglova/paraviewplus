@@ -198,6 +198,8 @@ Plots maps of selected UTCI category for each timestep. Generates 1 png per each
 
 ## Windrose
 
+Plotting windrose with default values for colormap and levels (bins) which can be adjusted by calling wr.set_colormap("colormap name from matplotlib") and wr.set_levels([0, 1, 2...]).
+
 ```
     # WINDROSE
     wr = Windrose(airpoints, airdata)
