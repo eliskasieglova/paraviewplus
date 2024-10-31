@@ -58,7 +58,7 @@ specify output folder for saving pngs instead of showing the plots; specify vari
 
 **Result**:
 
-![image](https://github.com/user-attachments/assets/d8721abc-3745-4d18-87d4-518ed269ce20)
+![image](https://github.com/user-attachments/assets/d8721abc-3745-4d18-87d4-518ed269ce20, style="border: 2px solid grey;")
 
 ## Simulation Results
 ![image](https://github.com/user-attachments/assets/3db652cd-fea3-4bee-af8e-6e5c7b209865)
