@@ -58,7 +58,7 @@ specify output folder for saving pngs instead of showing the plots; specify vari
 
 **Result**:
 
-|![image](https://github.com/user-attachments/assets/d8721abc-3745-4d18-87d4-518ed269ce20)|
+![image](https://github.com/user-attachments/assets/d8721abc-3745-4d18-87d4-518ed269ce20)
 
 ## Simulation Results
 ![image](https://github.com/user-attachments/assets/3db652cd-fea3-4bee-af8e-6e5c7b209865)
@@ -103,6 +103,7 @@ Specifying output folder and showing of plot is only a proposal here (not implem
 
 ![image](https://github.com/user-attachments/assets/23dd3921-64b8-4e66-bb8e-a0933fd8d0e5)
 
+- class SimulationResults in grapmaker.py
 
 - inputs:
 -   surface points (data/surface_point_shp.shp)
@@ -135,5 +136,33 @@ Specifying output folder and showing of plot is only a proposal here (not implem
 
 
 ## UTCI Category
+
+Plots maps of selected UTCI category for each timestep. Generates 1 png per each timestep in data ONLY with the selected UTCI category area.
+
+- class UTCICategory in graphmaker.py
+
+- inputs:
+-   surface points (data/surface_point_shp.shp)
+-   surface data (data/surface_data_2021_07_15.csv)
+  
+```
+    # load data
+    surfpoints = gpd.read_file("data/surface_point_shp.shp")
+    surfdata = pd.read_csv("data/surface_data_2021_07_15.csv")
+
+    # initiate class
+    utci = UTCICategory(surfpoints, surfdata, surfmesh)
+
+    # add category to plot
+    utci.add_category('moderate')
+
+    # run plotting
+    utci.run()
+```
+
+**Result**:
+
+![image](https://github.com/user-attachments/assets/81c41959-94ad-4db7-af8d-f64a8826393c)
+
 
 
