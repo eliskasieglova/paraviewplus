@@ -5,9 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
-from graphmaker import SimulationResults, TimeSeriesDemonstration
+from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose
+
 
 def main():
+
+    output_folder = "paraviewplus/figs"
 
     surfpoints = gpd.read_file("paraviewplus/shp/surface_point_SHP.shp")
     airpoints = gpd.read_file("paraviewplus/shp/air_point_SHP.shp")
@@ -24,17 +27,43 @@ def main():
     aoi3 = Polygon(((25496100, 6671900), (25496170, 6671800), (25496200, 6671820), (25496160, 6671900), (25496100, 6671900)))
     aoi4 = Polygon(((25496200, 6671950), (25496220, 6671850), (25496300, 6671820), (25496260, 6671950), (25496200, 6671950)))
 
-    aois = [aoi1, aoi2, aoi3, aoi4]
+    # PLOT AREAS OF INTEREST ABOVE MAP
+    aoimap = AOIsOnMap(surfpoints, surfdata, surfmesh)
+
+    # add aois
+    aoimap.add_area_of_interest(aoi1)
+    aoimap.add_area_of_interest(aoi2)
+    aoimap.add_area_of_interest(aoi3)
+    aoimap.add_area_of_interest(aoi4)
+
+    aoimap.set_output_folder(output_folder)
+    # run with point map underneath
+    #aoimap.plot()
+
+    # run with mesh underneath
+    aoimap.set_plot_type("mesh")
+    #aoimap.run()
+
+    # WINDROSE
+    wr = Windrose(airpoints, airdata)
+
+    wr.set_output_folder(output_folder)
+    #wr.run()
 
 
+    # SIMULATION RESULTS
     sr = SimulationResults(surfpoints, surfdata)
-    sr.set_areas_of_interest(aois)
-    sr.set_variable_names("all")
+    sr.add_area_of_interest(aoi1)
+    sr.add_area_of_interest(aoi2)
+    sr.add_area_of_interest(aoi3)
+    sr.add_variable("Tair")
+    sr.add_variable("UTCI")
     sr.set_output_folder("paraviewplus/figs")
     sr.set_show(True)
 
     #sr.run()  # TODO manual adding of variable and plot layout information - later
 
+    # TIME SERIES DEMONSTRATION
     tsd = TimeSeriesDemonstration(
         surfpoints=surfpoints,
         airpoints=airpoints,
@@ -43,57 +72,28 @@ def main():
         airdata=airdata,
     )
 
-    #tsd.run()
+    #tsd.plot()
+
+    tsd.set_output_folder(output_folder)
+    #tsd.export()
+
+    # UTCI
+    utci = UTCICategory(surfpoints, surfdata, surfmesh)
+    utci.add_category('moderate')
+
+    #utci.run()
+
+    # SIMULATION COMPARISON
+    sc = SimulationComparison(surfpoints, surfdata)
+    sc.add_aoi(aoi1)
+    sc.add_aoi(aoi2)
+    sc.add_variable("Tair")
+    sc.add_variable("UTCI")
+    sc.add_simulation(surfdata2)
+
+    sc.show()
 
 
-
-
-    
-
-
-    #graphmaker = DataPoints(gdf, df)
-
-    #graphmaker.plot_single_point("Tair", outdir="paraviewplus/figs", show=True, cell_ID=1)
-
-    #graphmaker.plot_variable_comparison(df2, "UTCI", areas_of_interest)
-
-    #graphmaker.plot_single_simulation("UTCI", areas_of_interest, outdir="paraviewplus/figs", show=True)
-    #graphmaker.plot_areas_of_interest(aois=areas_of_interest, outdir="paraviewplus/figs", show=True)
-
-    surfacepoints = SurfacePoints(gdf=gdf, df=df, aois=[aoi1, aoi2], output_folder="paraviewplus/figs")
-    #surfacepoints.compare_simulations(df2=df2, df3=df2, variable_names=["Tair", "UTCI"])
- 
-    walls = gpd.read_file('paraviewplus/cache/walls.shp')
-    rooftops=gpd.read_file('paraviewplus/cache/rooftops.shp')
-    airpoints=gpd.read_file("paraviewplus/shp/air_point_shp.shp")
-    airdata=pd.read_csv("paraviewplus/shp/air_data_2021_07_15.csv")
-    #surfacepoints.timeSeriesSimulation(16, walls, rooftops, airpoints, airdata)
-
-    #surfacepoints.plot_simulation_timeseries(walls, rooftops, airpoints, airdata)
-    surfacepoints.plot_UTCI_category(walls, rooftops, 'moderate')
-
-    #surfacepoints.plotSimulationResults("UTCI", [aoi1, aoi2, aoi3, aoi4], "paraviewplus/figs", show=True)
-
-    #airpoints = AirPoints(airpoints, airdata, "paraviewplus/figs")
-    #airpoints.plot_windrose()
-
-    #linegeometry = LineString([(25496120, 6672150), (25496315, 6671800)])
-    #time = 1
-    #surfacepoints.plot_slice_on_map(linegeometry)
-    #airpoints.plot_slice_on_map(linegeometry)
-    #surfacepoints.plot_points_3d(colorby="Tair")
-    #surfacepoints.plot_slice_3d(linegeometry)
-
-    #airpoints.plot_streamplot(1, gpd.read_file("paraviewplus/shp/surface_triangle_SHP.shp"), dims=2)
-    
-    #airpoints.plot_flow(1, gpd.read_file("paraviewplus/shp/surface_triangle_SHP.shp"))
-    #airpoints._remove_buildings(gpd.read_file("paraviewplus/shp/surface_point_SHP.shp"))
-
-    #surfacepoints.plot_slice_points(linegeometry, "Tair", time=1)
-    #surfacepoints.plot_slice_lines(linegeometry, "UTCI", time=1)
-    #airpoints.plot_slice_fishnet(linegeometry, "WindSpeed", resolution=5)
-
-    #airpoints.plot_matrix(linegeometry, "WindSpeed", resolution=5)
 
 if __name__ == "__main__":
     main()

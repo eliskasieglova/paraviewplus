@@ -4,15 +4,78 @@ import numpy as np
 from pathlib import Path
 from shapely import Point
 import scipy.interpolate as interp
-from windrose import WindroseAxes
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.colors import ListedColormap, BoundaryNorm
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib import rcParams
 rcParams['font.family'] = 'DejaVu Sans'
 
+
+class VariableChars:
+
+    def __init__(self, name) -> None:
+        pass
+
+        self.name = name
+
+        self.title = None
+        self.units = None
+
+        self.layout_ylim = None
+        self.layout_minorticks = None
+        self.layout_majorticks = None
+
+    def set_title(self, title):
+        self.title = title
+
+    def set_units(self, units):
+        self.units = units
+
+    def set_var_chars(self):
+
+        varchars = {
+            "Tair": {
+                "title": "Air Temperature",
+                "units": "Degrees Celsius", 
+                "note": "",
+                "cmap": "coolwarm"  # cmap from matplotlib list,
+            },
+            "Tsurf": {
+                "title": "Surface Temperature",
+                "units": "Degrees Celsius",
+                "note": "",
+                "cmap": "coolwarm" 
+            },
+            "UTCI": {
+                "title": "Felt Temperature",
+                "units": "Degrees Celsius",
+                "note": "",
+                "cmap": ListedColormap(['green', 'orange', 'orangered', 'red', 'darkred']),
+            },
+            "RelatHumid": {
+                "title": "Relative Humidity",
+                "units": "percent",
+                "note": "",
+                "cmap": "Purples"
+            },
+            "WindSpeed": {
+                "title": "Wind Speed",
+                "units": "m/s",
+                "note": "",
+                "cmap": "Blues"
+            }
+        }
+
+        if self.name in varchars.keys():
+            self.set_title(varchars[self.name]['title'])
+            self.set_units(varchars[self.name]['units'])
+
+        else:
+            self.set_title(self.name)
+            self.note(self.name)
+
+        
 
 class DataPoints:
     def __init__(self, gdf, df):
@@ -42,18 +105,13 @@ class DataPoints:
         }
         return units[variable_name]
     
-    def get_timesteps(self, df=None):
+    def get_timesteps(self):
         """ Return the time steps in the dataset """
-        if df is None:
-            df = self.df
-
-        return [x for x in np.unique(df.Time)]
+        return [x for x in np.unique(self.df.Time)]
     
-    def get_columns(self, df=None):
+    def get_columns(self):
         """ Get the columns (variables) of chosen dataset"""
-        if df is None:
-            df = self.df
-        return [x for x in df.columns]
+        return [x for x in self.df.columns]
     
     def _slice(self, line, b=1):
         """ Selects subset of the points along selected line. Works for 2d and 3d. """
@@ -68,84 +126,6 @@ class DataPoints:
         points_along_line["dist_from_origin"] = [Point(line.coords[0]).distance(Point(point.x, point.y)) for point in points_along_line.geometry]
 
         return points_along_line
-
-    def plot_slice_on_map(self, slice, show=True):
-
-        fig, ax = plt.subplots()
-
-        sc = ax.scatter(self.gdf.geometry.x, self.gdf.geometry.y, c=self.gdf.geometry.z, cmap="Spectral_r", s=1)
-        slice_gdf = gpd.GeoSeries([slice]) 
-        slice_gdf.plot(ax=ax, color='black', linewidth=2, label='Slice')
-
-        # Add a colorbar to the plot
-        cbar = plt.colorbar(sc, ax=ax)
-        cbar.set_label('Height (m)')  # You can change the label to describe what the color represents
-
-        plt.legend()
-        plt.title('Slice')
-
-        if show:
-            plt.show()
-
-    def plot_slice_3d(self, slice, show=True, variable_name=None):
-        """
-        Plots a 3D scatterplot of air points and a slice surface. Colors the points by variable if selected.
-
-        Params:
-        -------
-        - slice
-            Slice (shapely LineString)
-        - show
-            boolean, shows plot if true
-        - variable_name
-            specify variable if you want to color the air points by variable
-        
-        Returns:
-        --------
-        Shows a matplotlib plot if show==True, saves plot as figure to folder 'figs/'.
-        """
-
-        fig = plt.figure()
-        ax = fig.add_subplot(projection='3d')
-
-        if variable_name is not None:
-            data = pd.merge(self.gdf[["cell_ID"]], self.df)
-            data = data[data["Time"] == 1]
-
-        sc = ax.scatter(self.gdf.geometry.x, self.gdf.geometry.y, self.gdf.geometry.z, s=1, c=data[variable_name] if variable_name is not None else 'black',
-                        cmap="Spectral_r")
-
-        # plot 3d slice
-        slice_2d = gpd.GeoSeries([slice]) 
-        slice_coords = list(slice.coords) 
-        polygon_vertices = []
-
-        # Create the bottom face of the polygon (min_z)
-        for x, y in slice_coords:
-            polygon_vertices.append((x, y, 0))
-
-        # Create the top face of the polygon (max_z)
-        for x, y in reversed(slice_coords):
-            polygon_vertices.append((x, y, max(self.gdf.geometry.z)))
-
-        # Plot the polygon as a vertical surface using Poly3DCollection
-        poly = Poly3DCollection([polygon_vertices], color='red', alpha=0.3)
-        ax.add_collection3d(poly)
-
-        # Add a colorbar to the plot
-        if variable_name is not None:
-            cbar = plt.colorbar(sc, ax=ax)
-            cbar.set_label(self.units[variable_name])  
-
-        # Set title
-        plt.title('3D Slice' if variable_name is None else f"{self.titles[variable_name]}: 3D Slice")
-        ax.set_zlim(0, 150)
-
-        # Save figure, show if selected
-        plt.savefig("paraviewplus/figs/3dslice.png")
-        if show:
-            plt.show()
-
 
     def plot_points_3d(self, colorby=None):
 
@@ -183,11 +163,13 @@ class DataPoints:
 
 
 class SurfacePoints(DataPoints):
-    def __init__(self, gdf, df, aois=None):
+    def __init__(self, gdf, df):
         super().__init__(gdf, df)
 
-        self.aois = aois
-        self.output_folder = "paraviewplus/figs"
+        self.gdf = gdf
+        self.df = df
+
+        self.output_folder = None
 
     def get_layout(self, layout_item, variable_name):
 
@@ -230,20 +212,6 @@ class SurfacePoints(DataPoints):
         }
     
         return layouts[layout_item][variable_name]
-    
-    def plot_areas_of_interest(self, outdir, aois, show=True):
-        """ Plots areas of interest (list of shapely polygons) on map. """
-
-        self.gdf.plot()
-
-        for aoi in aois:
-            x,y = aoi.exterior.xy
-            plt.plot(x, y, c='blue')
-
-        plt.savefig(outdir + '/aois.png')
-
-        if show:
-            plt.show()
 
     def _apply_plot_layout(self, ax, variable_name):
         """Helper method to apply consistent layout settings to a plot."""
@@ -262,7 +230,7 @@ class SurfacePoints(DataPoints):
             majorticklocator = self.get_layout("majorticklocator", variable_name)
             minorticklocator = self.get_layout("minorticklocator", variable_name)
 
-        timesteps = self.get_timesteps(self.df)
+        timesteps = self.get_timesteps()
         
         # Apply x and y axis
         ax.set_xlim(timesteps[0], timesteps[-1])
@@ -323,11 +291,11 @@ class SurfacePoints(DataPoints):
             raise ValueError("Either (x and y) coordinates or cell_ID must be specified.")
         
         if cell_ID is not None:
-            x, y = self.gdf[self.gdf['cell_ID'] == cell_ID].geometry.x.tolist()[0], self.gdf[self.gdf['cell_ID'] == cell_ID].geometry.y.tolist()[0]
+            x, y = self.surfpoints[self.surfpoints['cell_ID'] == cell_ID].geometry.x.tolist()[0], self.surfpoints[self.surfpoints['cell_ID'] == cell_ID].geometry.y.tolist()[0]
     
         # extract data
-        values = [x for x in self.df[self.df['cell_ID'] == cell_ID][[variable_name]].values]
-        timesteps = [x for x in self.df[self.df['cell_ID'] == cell_ID][["Time"]].values]
+        values = [x for x in self.surfdata[self.surfdata['cell_ID'] == cell_ID][[variable_name]].values]
+        timesteps = [x for x in self.surfdata[self.surfdata['cell_ID'] == cell_ID][["Time"]].values]
         
         fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -525,109 +493,11 @@ class SurfacePoints(DataPoints):
         return
 
 
-    def plot_UTCI_category(self, walls=gpd.read_file('paraviewplus/cache/walls.shp'), rooftops=gpd.read_file('paraviewplus/cache/rooftops.shp'), cat='moderate'):
-
-        walls_path = Path("paraviewplus/cache/walls.shp")
-        rooftops_path = Path("paraviewplus/cache/rooftops.shp")
-        
-        # if walls and rooftops havent been made yet --> make them.
-        if walls_path.exists | rooftops_path.exists:
-            walls = gpd.read_file(walls_path)
-            rooftops = gpd.read_file(rooftops_path)
-            
-        else:
-            from surfacemesh import SurfaceMesh
-            walls, ground, rooftops = SurfaceMesh()._classify_surfaces()
-
-        # Define UTCI categories and plotting colors
-        utci_categories = {
-            'extreme': {'bounds': (46, 50), 'color': 'darkred'},
-            'very_strong': {'bounds': (38, 46), 'color': 'red'},
-            'strong': {'bounds': (32, 38), 'color': 'orangered'},
-            'moderate': {'bounds': (26, 32), 'color': 'orange'},
-            'no': {'bounds': (9, 26), 'color': 'lightgreen'}
-        }
-
-        for time in self.get_timesteps():
-
-            fig, ax = plt.subplots()
-
-            # extract area with UTCI according to selected temperature
-            temps = self.df[["cell_ID", "UTCI", "Time"]].dropna()
-            temps = temps.where(temps["Time"] == time).dropna()
-            #temps = temps.where((temps["UTCI"] > utci[cat]['bounds'][0]) & (temps["UTCI"] < utci[cat]['bounds'][1])).dropna()  # select the UTCI category
-
-            # merge csv with gpd
-            subset = gpd.GeoDataFrame(pd.merge(temps, self.gdf[["cell_ID", "geometry"]]))
-
-            contour = ax.tricontourf(subset.geometry.x, subset.geometry.y, subset.UTCI, levels=utci[cat]['bounds'], colors=utci[cat]["color"])
-
-            # plot the surface (walls)
-            walls.plot(ax=ax, edgecolor='black', linewidth=0.5)
-            rooftops.plot(ax=ax, edgecolor='black', linewidth=0.5, color='white')
-            ax.axis('off')
-            plt.title(f'UTCI: {cat} (hour {time})')
-            plt.show()
-
-        return
-    
-    def plotSimulationComparison(self, df2, df3=None, df4=None, variable_names=["Tair", "RelatHumid", "UTCI"]):
-
-        if isinstance(variable_names, str):
-            self.variable_names = [variable_names]
-        else:
-            self.variable_names = variable_names
-
-        dfs = [self.df, df2, df3, df4]
-
-        # TODO raise error if df2 or aois are empty
-
-        colors = ['red', 'blue', 'green', 'yellow']
-        letters = ['A', 'B', 'C', 'D']
-        for variable_name in self.variable_names:
-            for a, aoi in enumerate(self.aois):
-                fig, ax = plt.subplots(figsize=(12, 6))
-
-                # loop through simulations
-                for i, simulation in enumerate(dfs):
-                    if simulation is None:
-                        continue
-
-                    # plot values
-                    cell_IDs = self.gdf[self.gdf.within(aoi, align=True)]["cell_ID"].values.tolist()
-                    subset = simulation[simulation['cell_ID'].isin(cell_IDs)].dropna()
-
-                    cell_IDs = np.unique(subset['cell_ID'].values).tolist()  # reinitiate cell_IDs without nans
-                    timesteps = np.unique(subset.Time.values).tolist()  # get time steps
-                    avg_values = np.mean([subset[subset['cell_ID'] == id][variable_name].values for id in cell_IDs], axis=0)
-                    
-                    plt.plot(timesteps, avg_values, c=colors[i], label=f"Simulation {i+1}")
-
-                # apply layouts
-                self._apply_plot_layout(ax, variable_name)
-                self._plot_legend(ax)
-                if variable_name == "UTCI":
-                    self._apply_utci_background(ax)
-                #self._plot_note_text(variable_name)
-                plt.title(f"{self.get_title(variable_name)} (Area {letters[i]}): Existing vs. New Design{'s' if dfs[2] is not None else ''}",
-                        fontsize=18, fontweight='bold', y=1.1)
-                plt.subplots_adjust(top=0.85, bottom=0.2)
-
-                plt.savefig(f"{self.output_folder}/comparison_{variable_name}_area{letters[i]}.png")
-                
-                plt.show()
-
-        return
-
-
-
-
 class AirPoints(DataPoints):
-    def __init__(self, gdf, df, output_folder):
-        super().__init__(gdf, df, output_folder)
+    def __init__(self, gdf, df):
+        super().__init__(gdf, df)
         self.gdf = gdf
         self.df = df
-        self.output_folder = output_folder
 
     def plot_slice_fishnet(self, line, variable_name, resolution=10):
 
@@ -908,51 +778,11 @@ class AirPoints(DataPoints):
         ax.axis('off')
         
         # Show the plot 
-        plt.show()     
-
-
-    def plot_windrose(self, color_map=plt.cm.YlOrRd_r, levels=None):
-        """
-        Plots a windrose showing the distribution of wind direction and wind speed.
-        
-        Parameters:
-        color_map (matplotlib.colors.Colormap): The color map to use for the contour levels. Default is Yellow-Orange-Red.
-        levels (list of int): The bin edges for wind speed categories. Default is [0, 1, 2, 3, 4, 5, 7, 10].
-
-        Returns:
-        None
-        """
-
-        # Ensure required columns exist in DataFrame
-        required_columns = {'WindX', 'WindY', 'WindSpeed'}
-        if not required_columns.issubset(self.df.columns):
-            raise ValueError(f"DataFrame must contain the columns: {required_columns}")
-
-        # Calculate wind directions (0-360 degrees) based on vector components in WindX and WindY
-        wd = [(270 - np.degrees(np.arctan2(y, x))) % 360 for x, y in zip(self.df.WindX.values, self.df.WindY.values)]
-        ws = self.df.WindSpeed.values
-
-        # calculate the levels if not specified
-        if levels is None:
-            levels = np.arange(int(np.floor(min(ws))), int(np.ceil(max(ws))) + 1, (min(ws) + max(ws)) / 10)
-            levels = np.unique(np.round(levels).astype(int))
-
-        # Set up the windrose plot
-        ax = WindroseAxes.from_ax()
-        
-        # Plot filled contours with specified color map and levels
-        ax.contourf(wd, ws, bins=levels, cmap=color_map, edgecolor="black")
-
-        # Add legend
-        ax.set_legend(title="Wind Speed (m/s)", loc='upper left')
-
-        # Save the plot
-        plt.savefig(f"{self.output_folder}/windrose.png")
-
+        plt.show()
 
         
 class SurfaceMesh():
-    def __init__(self, surfmesh=gpd.read_file("paraviewplus/shp/surface_triangle_SHP.shp"), surfdata=pd.read_csv("paraviewplus/shp/surface_data_2021_07_15.csv")):
+    def __init__(self, surfmesh : gpd.GeoDataFrame, surfdata : pd.DataFrame):
         self.surfmesh = surfmesh
         self.surfdata = surfdata
 
