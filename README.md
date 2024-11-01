@@ -5,23 +5,27 @@ This code is meant to automate the generation of plots, maps, slices and 3d mode
 Example data can be found in the data/ folder. Some examples of plots are in Examples.md.
 
 
-# Files 
+# How to run
+Each of the analysis types has its own class. The classes have functions that can be divided into the further groups, according to the GUI structure: **Step 1, Step2, Step3, Step4.** **Step 1** is the initialization of the class. The inputs are meant to be the Ferda folder outputs: surface points, surface data, air points, air data, surface mesh. **Step 2** is for selecting the areas of interest (if necessary). **Step 3** is for selecting variables (ticking boxes), **Step 4** is for adjusting the plot characteristics (colormaps, levels etc.) and **Step 5** are functions for exporting/plotting the data.
+
+## Files 
 - inputs.py (for handling input data types)
 - graphmaker.py (creating plots)
 - main.py
 
-### inputs.py
+**inputs.py**
 - AirPoints --> functions for handling air points shapefile
 - SurfacePoints --> functions for handling surface points shp
 - SurfaceMesh --> functions for hangling surface triangles shp
 
-### graphmaker.py
+**graphmaker.py**
 - [TimeSeriesDemonstration](#time-series-demonstration-for-simulation-results) --> creates plot with subplots for each selected variable, plots the selected variables for each time step (1 png for each timestep. the subplots are maps colored by the selected variable)
 - [SimulationResults](#simulation-results) --> creates average of selected variable for selected areas of interest (x-axis = time, y-axis = selected variable)
 - [SimulationComparison](#simulation-comparison) --> creates plot comparing new vs. existing design. creates plot for each selected variable and aoi.
 - [UTCICategory](#utci_category) --> plots time series of selected UTCI category (only the selected category is shown on map). creates one figure for each timestep.
 - [AOIsOnMap](#map-of-areas-of-interest) --> plots polygons of areas of interest over map (either point map or mesh)
 - [Windrose](#windrose) --> plots wind rose (wind directions and wind speeds of the whole area)
+
 
   
 # Examples
