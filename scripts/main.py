@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
-from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose
+from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose, Slice
 from inputs import VariableChars
 
 
@@ -31,9 +31,6 @@ def main():
     # PLOT AREAS OF INTEREST ABOVE MAP
     aoimap = AOIsOnMap(surfpoints, surfdata, surfmesh)
 
-    varchars = VariableChars()
-    varchars.add_variable("ET")
-
     # add aois
     aoimap.add_area_of_interest(aoi1)
     aoimap.add_area_of_interest(aoi2)
@@ -47,6 +44,19 @@ def main():
     # run with mesh underneath
     aoimap.set_plot_type("mesh")
     #aoimap.run()
+
+    # Variable characteristics
+    varchars = VariableChars()
+    varchars.add_variable("ET")
+
+    # SLICE
+    slice = LineString([[25496100, 6672050], [25496115, 6672000]])
+    sl = Slice(airpoints, airdata, slice)
+    sl.add_variable("Tair")
+    sl.set_type("matrix")
+    sl.run()
+
+
 
     # WINDROSE
     wr = Windrose(airpoints, airdata)
@@ -96,9 +106,6 @@ def main():
     sc.add_simulation(surfdata2)
 
     #sc.show()
-
-
-
 
 
 if __name__ == "__main__":

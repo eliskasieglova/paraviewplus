@@ -7,10 +7,9 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from windrose import WindroseAxes
 from shapely import LineString, Point
+import scipy.interpolate as interp
 
-from inputs import SurfaceMesh
-from inputs import AirPoints
-from inputs import SurfacePoints
+from inputs import SurfaceMesh, AirPoints, SurfacePoints, VariableChars
 
 
 class AOIsOnMap(SurfacePoints, SurfaceMesh):
@@ -88,7 +87,7 @@ class AOIsOnMap(SurfacePoints, SurfaceMesh):
         if self.output_folder is not None:
             plt.savefig(f"{self.output_folder}/aois_{self.plot_type}")
 
-class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints):
+class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableChars):
     """
     A class to visualize time-series simulation data on a 2D mesh, specifically for
     surface and air properties across multiple variables.
@@ -118,6 +117,7 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints):
         SurfacePoints.__init__(self, self.surfpoints, self.surfdata)
         AirPoints.__init__(self, self.airpoints, self.airdata)
         SurfaceMesh.__init__(self, self.surfmesh, surfdata)
+        VariableChars.__init__(self)
 
         # creates walls and rooftops dataframes for plotting
         self.walls, self.rooftops = self._walls_rooftops()
@@ -603,18 +603,34 @@ class Windrose(AirPoints):
         plt.show()
 
 
-class Slice(AirPoints, SurfacePoints):
-    # TODO
+class Slice(AirPoints, SurfacePoints, VariableChars):
 
-    def __init__(self, gdf : gpd.GeoDataFrame, df : pd.DataFrame, slice : LineString):
+    def __init__(self, gdf : gpd.GeoDataFrame, df : pd.DataFrame, slice : LineString, type=None):
         super().__init__(gdf, df)
 
         self.gdf = gdf
         self.df = df
         self.slice = slice
+        self.plottype = "fishnet"
+        self.variable_list = []
+
+    def add_variable(self, variable_name):
+        self.variable_list.append(variable_name)
+
+    def set_type(self, plottype : str):
+        """ Set type of plot (fishnet or scatterplot or 3d). """
+
+        plottype = plottype.lower()  # convert to lowercase
+
+        # check if its a known type
+        allowed_types = ["fishnet", "scatter", "matrix"]
+        if plottype not in allowed_types:
+            raise ValueError(f"Invalid plot type. Choose from: {', '.join(allowed_types)}")
+        else:
+            self.plottype = plottype
         
     def _slice(self, line, b=1):
-        """ Selects subset of the points along selected line. Works for 2d and 3d. """
+        """ Selects subset of the points along selected line. Works for both 2d and 3d. """
 
         # create a small buffer around line
         buff = line.buffer(b)
@@ -628,6 +644,7 @@ class Slice(AirPoints, SurfacePoints):
         return points_along_line
 
     def plot_slice_on_map(self):
+        """ Plot map of the slice (from above). """
 
         fig, ax = plt.subplots()
 
@@ -703,4 +720,182 @@ class Slice(AirPoints, SurfacePoints):
         if show:
             plt.show()
 
- 
+    def _plot_scatterplot(self, variable_name):
+        """ 
+        Plot slice as a scatterplot, colored by variable name.
+        """
+
+        # create the slice
+        points_along_line = self._slice(self.slice)
+            
+        # Merge gdf with df
+        points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
+        merged = pd.merge(points_along_line, self.df, how="left", on="cell_ID")
+
+        # Plot the data
+        cmap = self.get_cmap(variable_name)
+        time = 1  
+        subset = merged[merged["Time"] == time]
+
+        # Create a copy of the subset to avoid setting on a copy warning
+        subset = subset.sort_values("dist_from_origin").copy()
+
+        # Assign colors based on variable_name
+
+        # Define the min and max values for color mapping
+        min_value = subset[variable_name].min()  # Set your own min value
+        max_value = subset[variable_name].max()  # Set your own max value
+
+        # Normalize the variable values for color mapping
+        norm = plt.Normalize(vmin=min_value, vmax=max_value)
+
+        # Assign colors based on variable_name using vmin and vmax for normalization
+        subset["color"] = [cmap((value - min_value) / (max_value - min_value)) for value in subset[variable_name].values]
+
+        # Plot using the color values
+        plt.style.use('dark_background')
+        sc = plt.scatter(subset["dist_from_origin"], subset.geometry.z, c=subset[variable_name], cmap=cmap, norm=norm, s=1.5)
+        # Add a colorbar to the plot
+        cbar = plt.colorbar(sc)
+
+        plt.xlabel('Distance from Origin')
+        plt.ylabel('Height')
+        plt.title(f'Scatter Plot of {variable_name}')
+        plt.show()
+            
+        return
+    
+    def _plot_fishnet(self, variable_name, resolution=10):
+
+        # Create slice and extract relevant points along the line
+        points_along_line = self._slice(self.slice, resolution)
+
+        # Plot based on distance from origin
+
+
+        # Merge gdf with df
+        points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
+        merged = pd.merge(points_along_line, self.df, how="left", on="cell_ID")
+
+        # Filter data for the selected time
+        time = 1
+        subset = merged[merged["Time"] == time].sort_values("dist_from_origin").copy()
+
+        # Create bounding box around the data points to cover the area with the fishnet
+        min_x, min_y, max_x, max_y = (
+            points_along_line.dist_from_origin.min(), 
+            points_along_line.geometry.z.min(), 
+            points_along_line.dist_from_origin.max(), 
+            points_along_line.geometry.z.max()
+        )
+
+        # Generate a fishnet (grid of polygons) over the data area with specified resolution
+        fishnet = []
+        x_values = np.arange(min_x, max_x + resolution, resolution)
+        y_values = np.arange(min_y, max_y + resolution, resolution)
+
+        from shapely.geometry import box 
+
+        for x in x_values:
+            for y in y_values:
+                cell = box(x, y, x + resolution, y + resolution)
+                fishnet.append(cell)
+
+        fishnet_gdf = gpd.GeoDataFrame(geometry=fishnet, crs=points_along_line.crs)
+        # Create a GeoDataFrame where geometry is based on dist_from_origin and geometry.z
+        points_gdf = gpd.GeoDataFrame(
+            subset,
+            geometry=[Point(x, z) for x, z in zip(subset["dist_from_origin"], subset.geometry.z)],
+            crs=points_along_line.crs
+        )
+
+        # Spatial join to match points to fishnet cells
+        joined = gpd.sjoin(points_gdf, fishnet_gdf, how='left', predicate='within')
+
+        # Check if any points were joined
+        print(joined['index_right'].isna().sum(), "points did not match any fishnet cell")
+
+        # Calculate average height values (geometry.z) within each cell of the fishnet
+        fishnet_avg = joined.groupby('index_right').agg({
+            variable_name: lambda vals: np.nanmean([v for v in vals])  # Calculate mean z values
+        }).reset_index()
+
+        fishnet_avg['index_right'] = [int(x) for x in fishnet_avg['index_right']]
+
+        # Merge back the average heights with the fishnet
+        fishnet_gdf = pd.merge(fishnet_gdf, fishnet_avg, left_index=True, right_on='index_right', how='right')
+
+        # colormap
+        cmap = self.get_cmap(variable_name)
+
+        # Normalize the variable values for color mapping
+        min_value = fishnet_gdf[variable_name].min()
+        max_value = fishnet_gdf[variable_name].max()
+        norm = plt.Normalize(vmin=min_value, vmax=max_value)
+
+        # Assign colors based on variable_name using vmin and vmax for normalization
+        fishnet_gdf["color"] = [cmap((value - min_value) / (max_value - min_value)) for value in fishnet_gdf[variable_name].values]
+
+        # Plot the fishnet grid colored by the average heights
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots()
+        fishnet_gdf = fishnet_gdf.set_geometry('geometry')
+        fishnet_gdf.plot(ax=ax, color=fishnet_gdf['color'], legend=True)
+
+        # Add a colorbar to the plot
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])  # We don't need to set actual data here
+        cbar = fig.colorbar(sm, ax=ax, shrink=0.5)
+
+        # Add plot labels and title
+        plt.xlabel('Distance from Origin')
+        plt.ylabel('Height')
+        plt.title(f'Plot of {variable_name} using Fishnet Grid')
+
+        return
+    
+    def _plot_matrix(self, variable_name, resolution=10):
+
+        slice = self._slice(self.slice)[["cell_ID", "geometry", "dist_from_origin"]]
+        merged = pd.merge(slice, self.df, how="left", on="cell_ID")
+
+        # Filter data for the selected time
+        time = 1
+        subset = merged[merged["Time"] == time].sort_values("dist_from_origin").copy()
+
+        # Step 2: Prepare the data for the grid
+        x = subset["dist_from_origin"].values
+        y = subset["geometry"].apply(lambda geom: geom.z if hasattr(geom, 'z') else np.nan).values
+        z = subset[variable_name].values
+
+        # Create a regular grid to interpolate the data
+        grid_x, grid_y = np.arange(x.min(), x.max(), resolution), np.arange(y.min(), y.max(), resolution)
+        grid_x, grid_y = np.meshgrid(grid_x, grid_y)
+
+        # Step 3: Interpolate the data to fill in NaN values
+        interpolated_z = interp.griddata((x, y), z, (grid_x, grid_y), method='linear')
+
+        # Step 4: Plot the matrix using a heatmap
+        plt.figure(figsize=(10, 6))
+        plt.imshow(interpolated_z, extent=(x.min(), x.max(), y.min(), y.max()), origin='lower', aspect='auto', cmap='Spectral_r')
+        plt.colorbar(label=variable_name)
+        plt.xlabel('Distance from Origin')
+        plt.ylabel('Geometry Z Value')
+        plt.title(f'Heatmap of {variable_name} values with Interpolation')
+
+    def run(self):
+        # TODO
+        for variable_name in self.variable_list:
+            if self.plottype == "fishnet":
+                self._plot_fishnet(variable_name)
+                plt.show()
+            elif self.plottype == "scatter":
+                self._plot_scatterplot(variable_name)
+                plt.show()
+            elif self.plottype == "matrix":
+                self._plot_matrix(variable_name)
+                plt.show()
+            
+    
+
+
