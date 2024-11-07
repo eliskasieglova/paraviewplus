@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from windrose import WindroseAxes
-from shapely import LineString
+from shapely import LineString, Point
 
 from inputs import SurfaceMesh
 from inputs import AirPoints
@@ -225,23 +225,47 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints):
         self._layout_time_series_sim(fig, ax, contour, levels, ticks, variable_name)
 
         return
-
+    
     def _create_plot(self, time):
         """
         Runs the visualization for each timestep in the surface data, plotting
         multiple variables in a 2x2 subplot layout.
         TODO redo this to being adjustable (vars, subplots etc)
         """
-        # create figure layout
-        fig, axs = plt.subplots(2, 2, figsize=(9, 9))
+        figsize = (9, 9)
+
+        if len(self.vars) == 1:
+            # setup
+            fig, ax = plt.subplots(figsize=figsize)
+            name = self.vars[0]
+            cmap = self.cmaps[0]
+            # run
+            self._plot_time_series_sim(fig, ax, name, cmap, time)
+
+        else: 
+            if len(self.vars) == 2:
+                # setup
+                n, m = (2, 1)
+                fig, axs = plt.subplots(n, m, figsize=figsize)
+                ax_list = [axs[0], axs[1]]
+
+            elif len(self.vars) == 3:
+                n, m  = (3, 1)
+                fig, axs = plt.subplots(n, m, figsize=figsize)
+                ax_list = [axs[0], axs[1], axs[3]]
+
+            elif len(self.vars) == 4:
+                n, m = (2, 2)
+                fig, axs = plt.subplots(n, m, figsize=figsize)
+                ax_list = [axs[0, 0], axs[0, 1], axs[1, 0], axs[1, 1]]
 
         # plot selected variables
         for i in range(len(self.vars)):
             name = self.vars[i]
             cmap = self.cmaps[i]
-            ax = [axs[0, 0], axs[0, 1], axs[1, 0], axs[1, 1]][i]
+            ax = ax_list[i]
             # plot
-            plt.subplot(2, 2, i+1) 
+            plt.subplot(n, m, i+1) 
             self._plot_time_series_sim(fig, ax, name, cmap, time)
 
         plt.suptitle(f"Time: {time}", fontsize = 40)
@@ -588,6 +612,20 @@ class Slice(AirPoints, SurfacePoints):
         self.gdf = gdf
         self.df = df
         self.slice = slice
+        
+    def _slice(self, line, b=1):
+        """ Selects subset of the points along selected line. Works for 2d and 3d. """
+
+        # create a small buffer around line
+        buff = line.buffer(b)
+
+        # plot values along line
+        points_along_line = self.gdf[self.gdf.within(buff)]
+
+        # count distance from origin
+        points_along_line["dist_from_origin"] = [Point(line.coords[0]).distance(Point(point.x, point.y)) for point in points_along_line.geometry]
+
+        return points_along_line
 
     def plot_slice_on_map(self):
 

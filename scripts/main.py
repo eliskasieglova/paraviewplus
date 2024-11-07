@@ -6,6 +6,7 @@ import numpy as np
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
 from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose
+from inputs import VariableChars
 
 
 def main():
@@ -29,6 +30,9 @@ def main():
 
     # PLOT AREAS OF INTEREST ABOVE MAP
     aoimap = AOIsOnMap(surfpoints, surfdata, surfmesh)
+
+    varchars = VariableChars()
+    varchars.add_variable("ET")
 
     # add aois
     aoimap.add_area_of_interest(aoi1)
@@ -72,7 +76,7 @@ def main():
         airdata=airdata,
     )
 
-    #tsd.plot()
+    tsd.plot()
 
     tsd.set_output_folder(output_folder)
     #tsd.export()
@@ -91,7 +95,9 @@ def main():
     sc.add_variable("UTCI")
     sc.add_simulation(surfdata2)
 
-    sc.show()
+    #sc.show()
+
+
 
 
 

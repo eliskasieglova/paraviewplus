@@ -14,96 +14,146 @@ rcParams['font.family'] = 'DejaVu Sans'
 
 class VariableChars:
 
-    def __init__(self, name) -> None:
-        pass
-
-        self.name = name
-
-        self.title = None
-        self.units = None
-
-        self.layout_ylim = None
-        self.layout_minorticks = None
-        self.layout_majorticks = None
-
-    def set_title(self, title):
-        self.title = title
-
-    def set_units(self, units):
-        self.units = units
-
-    def set_var_chars(self):
-
-        varchars = {
+    def __init__(self) -> None:
+        self.varchars = {
             "Tair": {
                 "title": "Air Temperature",
                 "units": "Degrees Celsius", 
                 "note": "",
-                "cmap": "coolwarm"  # cmap from matplotlib list,
+                "cmap": "coolwarm",  # cmap from matplotlib list
+                "ylims": (9, 50),
+                "yticks": (np.arange(10, 51, step=10)),
+                "minorticklocator": 5,
+                "majorticklocator": 10
             },
             "Tsurf": {
                 "title": "Surface Temperature",
                 "units": "Degrees Celsius",
                 "note": "",
-                "cmap": "coolwarm" 
+                "cmap": "coolwarm",
+                "ylims": (9, 50),
+                "yticks": (np.arange(10, 51, step=10)),
+                "minorticklocator": 5,
+                "majorticklocator": 10
             },
             "UTCI": {
                 "title": "Felt Temperature",
                 "units": "Degrees Celsius",
                 "note": "",
                 "cmap": ListedColormap(['green', 'orange', 'orangered', 'red', 'darkred']),
+                "ylims": (9, 50),
+                "yticks": (np.arange(10, 51, step=10)),
+                "minorticklocator": 5,
+                "majorticklocator": 10
             },
             "RelatHumid": {
                 "title": "Relative Humidity",
                 "units": "percent",
                 "note": "",
-                "cmap": "Purples"
+                "cmap": "Purples",
+                "ylims": (0, 1),
+                "yticks": (np.arange(0, 1.1, step=0.1)),
+                "minorticklocator": 0.05,
+                "majorticklocator": 0.1
             },
             "WindSpeed": {
                 "title": "Wind Speed",
                 "units": "m/s",
                 "note": "",
-                "cmap": "Blues"
+                "cmap": "Blues",
+                "ylims": None,
+                "yticks": None,
+                "minorticklocator": None,
+                "majorticklocator": None
             }
         }
 
-        if self.name in varchars.keys():
-            self.set_title(varchars[self.name]['title'])
-            self.set_units(varchars[self.name]['units'])
-
+    def get_title(self, name):
+        if not name in self.varchars.keys():
+            return ""
         else:
-            self.set_title(self.name)
-            self.note(self.name)
-
+            return self.varchars[name]["title"]
+    
+    def get_units(self, name):
+        if not name in self.varchars.keys():
+            return ""
+        else:
+            return self.varchars[name]["units"]
+    
+    def get_note_text(self, name):
+        if not name in self.varchars.keys():
+            return ""
+        else:
+            return self.varchars[name]["note"]
+    
+    def get_ylims(self, name):
+        if not name in self.varchars.keys():
+            return ""
+        else:
+            return self.varchars[name]["ylims"]
+    
+    def get_yticks(self, name):
+        if not name in self.varchars.keys():
+            return ""
+        else:
+            return self.varchars[name]["yticks"]
+    
+    def get_cmap(self, name):
+        if not name in self.varchars.keys():
+            return ""
+        else:
+            return self.varchars[name]["cmap"]
+    
+    def get_minorticklocator(self, name):
+        if not name in self.varchars.keys():
+            return ""
+        else:
+            return self.varchars[name]["minorticklocator"]
+    
+    def get_majorticklocator(self, name):
+        if not name in self.varchars.keys():
+            return ""
+        else:
+            return self.varchars[name]["majorticklocator"]
         
+    def add_variable(self, name):
 
-class DataPoints:
+        dict_keys = [k for k in self.varchars["Tair"].keys()]
+        
+        self.varchars[name] = {
+
+        }
+
+        for k in dict_keys:
+            self.varchars[name][k] = ""
+    
+    def set_title(self, name, title):
+        self.varchars[name]["title"] = title
+
+    def set_units(self, name, units):
+        self.varchars[name]["units"] = units
+
+    def set_cmap(self, name, cmap):
+        self.varchars[name]["cmap"] = cmap
+
+    def set_ylimx(self, name, ylims):
+        self.varchars[name]["ylims"] = ylims
+
+    def set_yticks(self, name, yticks):
+        self.varchars[name]["yticks"] = yticks
+
+    def set_minorticklocator(self, name, minorticklocator):
+        self.varchars[name]["minorticklocator"] = minorticklocator
+
+    def set_majorticklocator(self, name, majorticklocator):
+        self.varchars[name]["majorticklocator"] = majorticklocator
+
+
+class DataPoints(VariableChars):
     def __init__(self, gdf, df):
         self.gdf = gdf
         self.df = df
         self.output_folder = "paraviewplus/figs"
-    
-    def get_title(self, variable_name):
-        """ Get title of variable (used for plotting). """
-        titles = {
-            "Tair": "Air Temperature",
-            "WindSpeed": "Wind Speed",
-            "Tsurf": "Surface Temperature",
-            "RelatHumid": "Relative Humidity",
-            "UTCI": "Felt Temperature - UTCI"
-        }
-        return titles[variable_name]
-    
-    def get_units(self, variable_name):
-        """ Get units of variable (used for plotting). """
-
-        units = {
-            "Tair": "Degrees (°C)",
-            "Tsurf": "Degrees (°C)",
-            "RelatHumid": "Percentage (%) x 0.01",
-            "UTCI": "Degrees (°C)"
-        }
-        return units[variable_name]
     
     def get_timesteps(self):
         """ Return the time steps in the dataset """
@@ -112,20 +162,6 @@ class DataPoints:
     def get_columns(self):
         """ Get the columns (variables) of chosen dataset"""
         return [x for x in self.df.columns]
-    
-    def _slice(self, line, b=1):
-        """ Selects subset of the points along selected line. Works for 2d and 3d. """
-
-        # create a small buffer around line
-        buff = line.buffer(b)
-
-        # plot values along line
-        points_along_line = self.gdf[self.gdf.within(buff)]
-
-        # count distance from origin
-        points_along_line["dist_from_origin"] = [Point(line.coords[0]).distance(Point(point.x, point.y)) for point in points_along_line.geometry]
-
-        return points_along_line
 
     def plot_points_3d(self, colorby=None):
 
@@ -160,7 +196,7 @@ class DataPoints:
             ax.add_collection3d(Poly3DCollection(verts, color=color, alpha=0.5, linewidths=0.2, edgecolors='gray'))
 
         return
-
+    
 
 class SurfacePoints(DataPoints):
     def __init__(self, gdf, df):
@@ -172,6 +208,8 @@ class SurfacePoints(DataPoints):
         self.output_folder = None
 
     def get_layout(self, layout_item, variable_name):
+
+        layouts = pd.read_csv("paraviewplus/data/variables.csv")
 
         layouts = {
             "ylims": {
