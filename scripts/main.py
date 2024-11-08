@@ -54,8 +54,7 @@ def main():
     sl = Slice(airpoints, airdata, slice)
     sl.add_variable("Tair")
     sl.set_type("matrix")
-    sl.run()
-
+    #sl.run()
 
 
     # WINDROSE
@@ -75,7 +74,7 @@ def main():
     sr.set_output_folder("paraviewplus/figs")
     sr.set_show(True)
 
-    #sr.run()  # TODO manual adding of variable and plot layout information - later
+    sr.run()  
 
     # TIME SERIES DEMONSTRATION
     tsd = TimeSeriesDemonstration(
@@ -85,6 +84,8 @@ def main():
         surfdata=surfdata,
         airdata=airdata,
     )
+
+    tsd.add_variable("WindDirection")
 
     tsd.plot()
 

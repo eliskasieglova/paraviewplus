@@ -23,6 +23,7 @@ class VariableChars:
                 "yticks": (np.arange(10, 51, step=10)),
                 "minorticklocator": 5,
                 "majorticklocator": 10
+
             },
             "Tsurf": {
                 "title": "Surface Temperature",
@@ -59,8 +60,8 @@ class VariableChars:
                 "units": "m/s",
                 "note": "",
                 "cmap": "Blues",
-                "ylims": None,
-                "yticks": None,
+                "ylims": (0, 10),
+                "yticks": (np.arange(0, 10, step=1)),
                 "minorticklocator": None,
                 "majorticklocator": None
             }
@@ -206,8 +207,6 @@ class SurfacePoints(DataPoints):
         self.output_folder = None
 
     def get_layout(self, layout_item, variable_name):
-
-        layouts = pd.read_csv("paraviewplus/data/variables.csv")
 
         layouts = {
             "ylims": {
@@ -642,10 +641,6 @@ class AirPoints(DataPoints):
         cbar.ax.tick_params(labelsize=8)
 
         ax.axis('off')
-        
-        # Show the plot 
-        plt.show()
-
         
 class SurfaceMesh():
     def __init__(self, surfmesh : gpd.GeoDataFrame, surfdata : pd.DataFrame):

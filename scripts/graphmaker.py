@@ -123,13 +123,10 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
         self.walls, self.rooftops = self._walls_rooftops()
 
         self.output_folder = None
-        self.vars = ["Tair", "RelatHumid", "WindSpeed", "UTCI"]
-        self.cmaps = ["coolwarm", "Purples", "Blues", ListedColormap(['green', 'orange', 'orangered', 'red', 'darkred'])]
+        self.vars = []
 
-    def replace_variable(self, idx : int, new_var : str, new_cmap : str):
-
-        self.vars[idx] = new_var
-        self.cmaps[idx] = new_cmap
+    def add_variable(self, variable_name):
+        self.vars.append(variable_name)
 
     def set_output_folder(self, output_folder):
         self.output_folder = output_folder
@@ -203,9 +200,16 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
             ticks = levels
             norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
             contour = ax.tricontourf(triang, subset[variable_name], levels=levels, cmap=cmap, norm=norm)
+        elif variable_name == "WindDirection":
+            self.plot_windflow(time)
         else: 
-            min_value = 10 * (min(merged[variable_name]) // 10)
-            max_value = 10 * (max(merged[variable_name]) // 10)
+            if variable_name == "WindSpeed":
+                min_value = 5 * (min(merged[variable_name]) // 5)
+                max_value = 5 * (max(merged[variable_name]) // 5)
+            else: 
+                min_value = 10 * (min(merged[variable_name]) // 10)
+                max_value = 10 * (max(merged[variable_name]) // 10)
+
             if variable_name == "Tair":
                 levels = np.arange(min_value, max_value + 1, 1)
                 ticks = np.arange(min_value, max_value + 1, 5)
@@ -222,7 +226,8 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
         self.walls.plot(ax=ax, edgecolor='black', linewidth=0.5)
         self.rooftops.plot(ax=ax, edgecolor='black', linewidth=0.5, color='white')
 
-        self._layout_time_series_sim(fig, ax, contour, levels, ticks, variable_name)
+        if variable_name != "WindDirection":
+            self._layout_time_series_sim(fig, ax, contour, levels, ticks, variable_name)
 
         return
     
@@ -238,35 +243,36 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
             # setup
             fig, ax = plt.subplots(figsize=figsize)
             name = self.vars[0]
-            cmap = self.cmaps[0]
+            cmap = self.get_cmap(self.vars[0])
+            #cmap = self.cmaps[0]
             # run
             self._plot_time_series_sim(fig, ax, name, cmap, time)
 
         else: 
             if len(self.vars) == 2:
                 # setup
-                n, m = (2, 1)
+                n, m = (1, 2)
                 fig, axs = plt.subplots(n, m, figsize=figsize)
                 ax_list = [axs[0], axs[1]]
 
             elif len(self.vars) == 3:
-                n, m  = (3, 1)
+                n, m  = (1, 3)
                 fig, axs = plt.subplots(n, m, figsize=figsize)
-                ax_list = [axs[0], axs[1], axs[3]]
+                ax_list = [axs[0], axs[1], axs[2]]
 
             elif len(self.vars) == 4:
                 n, m = (2, 2)
                 fig, axs = plt.subplots(n, m, figsize=figsize)
                 ax_list = [axs[0, 0], axs[0, 1], axs[1, 0], axs[1, 1]]
 
-        # plot selected variables
-        for i in range(len(self.vars)):
-            name = self.vars[i]
-            cmap = self.cmaps[i]
-            ax = ax_list[i]
-            # plot
-            plt.subplot(n, m, i+1) 
-            self._plot_time_series_sim(fig, ax, name, cmap, time)
+            # plot selected variables
+            for i in range(len(self.vars)):
+                name = self.vars[i]
+                cmap = self.get_cmap(self.vars[i])
+                ax = ax_list[i]
+                # plot
+                plt.subplot(n, m, i+1) 
+                self._plot_time_series_sim(fig, ax, name, cmap, time)
 
         plt.suptitle(f"Time: {time}", fontsize = 40)
 
@@ -281,14 +287,15 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
             self._create_plot(time)
             plt.savefig(f"{self.output_folder}/timeseries_{time}.png")
         
-class SimulationResults(SurfacePoints):
+class SimulationResults(SurfacePoints, VariableChars):
     """ Plots the simulation results for the chosen areas of interest in one plot for each selected variable. """
 
     def __init__(self, surfpoints : gpd.GeoDataFrame, surfdata : pd.DataFrame) -> None:
         self.surfpoints = surfpoints
         self.surfdata = surfdata
 
-        super().__init__(surfpoints, surfdata)
+        SurfacePoints.__init__(self, surfpoints, surfdata)
+        VariableChars.__init__(self)
 
         self.areas_of_interest = []
         self.variable_names = []
