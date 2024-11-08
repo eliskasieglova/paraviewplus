@@ -63,7 +63,6 @@ def main():
     wr.set_output_folder(output_folder)
     #wr.run()
 
-
     # SIMULATION RESULTS
     sr = SimulationResults(surfpoints, surfdata)
     sr.add_area_of_interest(aoi1)
@@ -85,11 +84,11 @@ def main():
         airdata=airdata,
     )
 
-    tsd.add_variable("WindDirection")
+    tsd.add_variable("WindDirection") # TODO fix wind direction
 
-    tsd.plot()
+    #tsd.plot()
 
-    tsd.set_output_folder(output_folder)
+    #tsd.set_output_folder(output_folder)
     #tsd.export()
 
     # UTCI
@@ -106,7 +105,7 @@ def main():
     sc.add_variable("UTCI")
     sc.add_simulation(surfdata2)
 
-    #sc.show()
+    sc.show()
 
 
 if __name__ == "__main__":

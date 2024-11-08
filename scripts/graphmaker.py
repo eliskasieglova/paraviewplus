@@ -428,13 +428,14 @@ class UTCICategory(SurfacePoints, SurfaceMesh):
                 plt.show()
     
 
-class SimulationComparison(SurfacePoints):
+class SimulationComparison(SurfacePoints, VariableChars):
 
     def __init__(self, surfpoints : gpd.GeoDataFrame, surfdata : pd.DataFrame) -> None:
         self.surfpoints = surfpoints
         self.surfdata = surfdata
 
-        super().__init__(self.surfpoints, self.surfdata) 
+        SurfacePoints.__init__(self, self.surfpoints, self.surfdata) 
+        VariableChars.__init__(self)
 
         self.simulations = [self.surfdata]
         self.sim_names = []
