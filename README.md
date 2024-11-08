@@ -95,7 +95,8 @@ specify output folder for saving pngs instead of showing the plots; specify vari
 
     # step 4: specify output folder/showing of plot
     sr.set_output_folder("paraviewplus/figs")
-    sr.set_show(True)
+    sr.set_show(True)  # do you want to show the plot?
+    sr.run()  # run
 ```
 **Notes**:
 
