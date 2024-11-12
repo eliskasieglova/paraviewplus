@@ -2,13 +2,17 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from windrose import WindroseAxes
 from shapely import LineString, Point
 import scipy.interpolate as interp
-
+import tkinter as tk
+import customtkinter as ctk
 from inputs import SurfaceMesh, AirPoints, SurfacePoints, VariableChars
 
 
@@ -290,26 +294,50 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
 class SimulationResults(SurfacePoints, VariableChars):
     """ Plots the simulation results for the chosen areas of interest in one plot for each selected variable. """
 
-    def __init__(self, surfpoints : gpd.GeoDataFrame, surfdata : pd.DataFrame) -> None:
+    def __init__(self, surfpoints : gpd.GeoDataFrame, surfdata : pd.DataFrame, variable_name : str) -> None:
+
+        # input data
         self.surfpoints = surfpoints
         self.surfdata = surfdata
+        self.variable_name = variable_name
 
         SurfacePoints.__init__(self, surfpoints, surfdata)
         VariableChars.__init__(self)
 
         self.areas_of_interest = []
-        self.variable_names = []
-
-        self.export = False
-        self.show = False
-
         self.output_folder = None
+
+        # plot visualization
+        self.colors = ['blue', 'red', 'yellow', 'green', 'brown', 'pink'][:len(self.areas_of_interest)]
+        self.title = self.get_title(self.variable_name)
+        self.note = ""
+
+        # tkinter window
+        self.root = ctk.CTk()
+        self.root.geometry("1200x400")
+        self.root.title("Main Window")
+        self.root.update()
+        self.frame = ctk.CTkFrame(master=self.root,
+                                  height= self.root.winfo_height()*0.66,
+                                  width = self.root.winfo_width()*0.95,
+                                  fg_color="darkblue")
+        self.frame.place(relx=0.33, rely=0.025)
+        self.input =  ctk.CTkEntry(master=self.root,
+                                   placeholder_text=100,
+                                   justify='center',
+                                   width=300,
+                                   height=50,
+                                   fg_color="darkblue")
+        self.input.insert(0,100)
+        self.input.place(relx=0.025,rely=0.5)
+
+        plot_frame = ctk.CTkFrame(self.root, width=1000, height=400)
+        plot_frame.grid(row=0, column=0, sticky="nsew")
+
+        self.fig, self.ax = plt.subplots(figsize=(12, 5), facecolor='#F2F2F2')
 
     def set_output_folder(self, output_folder):
         self.output_folder = output_folder
-
-    def add_variable(self, variable_name : str):
-        self.variable_names.append(variable_name)
 
     def add_area_of_interest(self, aoi):
         self.areas_of_interest.append(aoi)
@@ -319,8 +347,21 @@ class SimulationResults(SurfacePoints, VariableChars):
 
     def set_show(self, selection : bool):
         self.show = selection
+
+    def set_title(self, title):
+        self.title = title
+        return self.title
     
-    def plot(self, variable_name, colors=['blue', 'red', 'yellow', 'green']):
+    def set_note(self, note):
+        self.note = note
+
+    def set_ylim(self, ylims):
+        self.ylims = ylims
+    
+    def set_color(self, idx, color):
+        self.colors[idx] = color
+
+    def update_plot(self):
         """
         Generates and displays a plot for a single simulation variable over time for all AOIs.
 
@@ -332,29 +373,34 @@ class SimulationResults(SurfacePoints, VariableChars):
             A list of colors for the areas of interest (AOIs). Defaults to ['blue', 'red', 'yellow', 'green'].
         """
 
-        # initiate figure
-        fig, ax = plt.subplots(figsize=(12, 6))
-        
         # plot values
-        self._build_plot(self.surfdata, self.areas_of_interest, variable_name, colors=colors)
+        self._build_plot(self.surfdata, self.areas_of_interest, self.variable_name, colors=self.colors)
 
         # apply layouts
-        self._apply_plot_layout(ax, variable_name)
-        self._plot_legend(ax)
-        self._plot_note_text(variable_name)
-        plt.title(self.get_title(variable_name), fontsize=18, fontweight='bold', y=1.1)
+        self._apply_plot_layout(self.ax, self.variable_name)
+        self._plot_legend(self.ax)
+        note = self._plot_note_text(self.variable_name)
+        self.ax.set_title(self.title, fontsize=18, fontweight='bold', y=1.1)
+        self.ax.set_title(self.set_title("ABCD"))
         plt.subplots_adjust(top=0.85, bottom=0.2)
 
-    def run(self):
-        """ Run the graphmaking. Export or show based on user selection. """
-        for variable_name in self.variable_names:
-            self.plot(variable_name)
+        canvas = FigureCanvasTkAgg(self.fig, master=self.root)
+        canvas.draw()
+        canvas.get_tk_widget().place(relx=0.05, rely=0.05)
 
-            if self.export:
-                plt.savefig(f'{self.output_folder}/' + f'{variable_name}.png')   
+        self.root.update()
 
-            if self.show:
-                plt.show()
+    def show(self):
+        self.update_plot()
+        self.root.mainloop()
+
+    def export(self):
+        self.plot()
+        plt.savefig(f'{self.output_folder}/' + f'{self.variable_name}.png')  
+    
+    def exit(self):
+        self.root.destroy()
+
 
 class UTCICategory(SurfacePoints, SurfaceMesh):
 
@@ -613,29 +659,23 @@ class Windrose(AirPoints):
 
 class Slice(AirPoints, SurfacePoints, VariableChars):
 
-    def __init__(self, gdf : gpd.GeoDataFrame, df : pd.DataFrame, slice : LineString, type=None):
+    def __init__(self, gdf : gpd.GeoDataFrame, df : pd.DataFrame, slice : LineString, variable_name : str):
         super().__init__(gdf, df)
+
+        VariableChars.__init__(self)
 
         self.gdf = gdf
         self.df = df
         self.slice = slice
-        self.plottype = "fishnet"
-        self.variable_list = []
+        self.variable_name = variable_name
+
+        self.resolution = 10
 
     def add_variable(self, variable_name):
         self.variable_list.append(variable_name)
 
-    def set_type(self, plottype : str):
-        """ Set type of plot (fishnet or scatterplot or 3d). """
-
-        plottype = plottype.lower()  # convert to lowercase
-
-        # check if its a known type
-        allowed_types = ["fishnet", "scatter", "matrix"]
-        if plottype not in allowed_types:
-            raise ValueError(f"Invalid plot type. Choose from: {', '.join(allowed_types)}")
-        else:
-            self.plottype = plottype
+    def set_resolution(self, resolution):
+        self.resolution = resolution
         
     def _slice(self, line, b=1):
         """ Selects subset of the points along selected line. Works for both 2d and 3d. """
@@ -728,58 +768,10 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         if show:
             plt.show()
 
-    def _plot_scatterplot(self, variable_name):
-        """ 
-        Plot slice as a scatterplot, colored by variable name.
-        """
-
-        # create the slice
-        points_along_line = self._slice(self.slice)
-            
-        # Merge gdf with df
-        points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
-        merged = pd.merge(points_along_line, self.df, how="left", on="cell_ID")
-
-        # Plot the data
-        cmap = self.get_cmap(variable_name)
-        time = 1  
-        subset = merged[merged["Time"] == time]
-
-        # Create a copy of the subset to avoid setting on a copy warning
-        subset = subset.sort_values("dist_from_origin").copy()
-
-        # Assign colors based on variable_name
-
-        # Define the min and max values for color mapping
-        min_value = subset[variable_name].min()  # Set your own min value
-        max_value = subset[variable_name].max()  # Set your own max value
-
-        # Normalize the variable values for color mapping
-        norm = plt.Normalize(vmin=min_value, vmax=max_value)
-
-        # Assign colors based on variable_name using vmin and vmax for normalization
-        subset["color"] = [cmap((value - min_value) / (max_value - min_value)) for value in subset[variable_name].values]
-
-        # Plot using the color values
-        plt.style.use('dark_background')
-        sc = plt.scatter(subset["dist_from_origin"], subset.geometry.z, c=subset[variable_name], cmap=cmap, norm=norm, s=1.5)
-        # Add a colorbar to the plot
-        cbar = plt.colorbar(sc)
-
-        plt.xlabel('Distance from Origin')
-        plt.ylabel('Height')
-        plt.title(f'Scatter Plot of {variable_name}')
-        plt.show()
-            
-        return
-    
-    def _plot_fishnet(self, variable_name, resolution=10):
+    def plot(self):
 
         # Create slice and extract relevant points along the line
-        points_along_line = self._slice(self.slice, resolution)
-
-        # Plot based on distance from origin
-
+        points_along_line = self._slice(self.slice, 10)
 
         # Merge gdf with df
         points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
@@ -799,14 +791,14 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
 
         # Generate a fishnet (grid of polygons) over the data area with specified resolution
         fishnet = []
-        x_values = np.arange(min_x, max_x + resolution, resolution)
-        y_values = np.arange(min_y, max_y + resolution, resolution)
+        x_values = np.arange(min_x * 0.9, max_x + self.resolution, self.resolution)
+        y_values = np.arange(min_y * 0.9, max_y + self.resolution, self.resolution)
 
         from shapely.geometry import box 
 
         for x in x_values:
             for y in y_values:
-                cell = box(x, y, x + resolution, y + resolution)
+                cell = box(x, y, x + self.resolution, y + self.resolution)
                 fishnet.append(cell)
 
         fishnet_gdf = gpd.GeoDataFrame(geometry=fishnet, crs=points_along_line.crs)
@@ -825,7 +817,7 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
 
         # Calculate average height values (geometry.z) within each cell of the fishnet
         fishnet_avg = joined.groupby('index_right').agg({
-            variable_name: lambda vals: np.nanmean([v for v in vals])  # Calculate mean z values
+            self.variable_name: lambda vals: np.nanmean([v for v in vals])  # Calculate mean z values
         }).reset_index()
 
         fishnet_avg['index_right'] = [int(x) for x in fishnet_avg['index_right']]
@@ -834,18 +826,17 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         fishnet_gdf = pd.merge(fishnet_gdf, fishnet_avg, left_index=True, right_on='index_right', how='right')
 
         # colormap
-        cmap = self.get_cmap(variable_name)
+        cmap = plt.get_cmap(self.get_cmap(self.variable_name))
 
         # Normalize the variable values for color mapping
-        min_value = fishnet_gdf[variable_name].min()
-        max_value = fishnet_gdf[variable_name].max()
+        min_value = fishnet_gdf[self.variable_name].min()
+        max_value = fishnet_gdf[self.variable_name].max()
         norm = plt.Normalize(vmin=min_value, vmax=max_value)
 
         # Assign colors based on variable_name using vmin and vmax for normalization
-        fishnet_gdf["color"] = [cmap((value - min_value) / (max_value - min_value)) for value in fishnet_gdf[variable_name].values]
+        fishnet_gdf["color"] = [cmap((value - min_value) / (max_value - min_value)) for value in fishnet_gdf[self.variable_name].values]
 
         # Plot the fishnet grid colored by the average heights
-        plt.style.use('dark_background')
         fig, ax = plt.subplots()
         fishnet_gdf = fishnet_gdf.set_geometry('geometry')
         fishnet_gdf.plot(ax=ax, color=fishnet_gdf['color'], legend=True)
@@ -858,52 +849,7 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         # Add plot labels and title
         plt.xlabel('Distance from Origin')
         plt.ylabel('Height')
-        plt.title(f'Plot of {variable_name} using Fishnet Grid')
+        plt.title(f'Plot of {self.variable_name} using Fishnet Grid')
 
-        return
-    
-    def _plot_matrix(self, variable_name, resolution=10):
-
-        slice = self._slice(self.slice)[["cell_ID", "geometry", "dist_from_origin"]]
-        merged = pd.merge(slice, self.df, how="left", on="cell_ID")
-
-        # Filter data for the selected time
-        time = 1
-        subset = merged[merged["Time"] == time].sort_values("dist_from_origin").copy()
-
-        # Step 2: Prepare the data for the grid
-        x = subset["dist_from_origin"].values
-        y = subset["geometry"].apply(lambda geom: geom.z if hasattr(geom, 'z') else np.nan).values
-        z = subset[variable_name].values
-
-        # Create a regular grid to interpolate the data
-        grid_x, grid_y = np.arange(x.min(), x.max(), resolution), np.arange(y.min(), y.max(), resolution)
-        grid_x, grid_y = np.meshgrid(grid_x, grid_y)
-
-        # Step 3: Interpolate the data to fill in NaN values
-        interpolated_z = interp.griddata((x, y), z, (grid_x, grid_y), method='linear')
-
-        # Step 4: Plot the matrix using a heatmap
-        plt.figure(figsize=(10, 6))
-        plt.imshow(interpolated_z, extent=(x.min(), x.max(), y.min(), y.max()), origin='lower', aspect='auto', cmap='Spectral_r')
-        plt.colorbar(label=variable_name)
-        plt.xlabel('Distance from Origin')
-        plt.ylabel('Geometry Z Value')
-        plt.title(f'Heatmap of {variable_name} values with Interpolation')
-
-    def run(self):
-        # TODO
-        for variable_name in self.variable_list:
-            if self.plottype == "fishnet":
-                self._plot_fishnet(variable_name)
-                plt.show()
-            elif self.plottype == "scatter":
-                self._plot_scatterplot(variable_name)
-                plt.show()
-            elif self.plottype == "matrix":
-                self._plot_matrix(variable_name)
-                plt.show()
-            
-    
-
-
+        plt.show()
+        

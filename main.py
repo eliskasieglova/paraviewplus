@@ -50,30 +50,23 @@ def main():
     varchars.add_variable("ET")
 
     # SLICE
-    slice = LineString([[25496100, 6672050], [25496115, 6672000]])
-    sl = Slice(airpoints, airdata, slice)
-    sl.add_variable("Tair")
-    sl.set_type("matrix")
-    #sl.run()
-
+    slice = LineString([[25496100, 6672150], [25496300, 6671800]])
+    sl = Slice(airpoints, airdata, slice, "Tair")
+    sl.set_resolution(5)
+    #sl.plot()
 
     # WINDROSE
     wr = Windrose(airpoints, airdata)
-
     wr.set_output_folder(output_folder)
     #wr.run()
 
     # SIMULATION RESULTS
-    sr = SimulationResults(surfpoints, surfdata)
-    sr.add_area_of_interest(aoi1)
-    sr.add_area_of_interest(aoi2)
-    sr.add_area_of_interest(aoi3)
-    sr.add_variable("Tair")
-    sr.add_variable("UTCI")
-    sr.set_output_folder("paraviewplus/figs")
-    sr.set_show(True)
-
-    sr.run()  
+    #sr = SimulationResults(surfpoints, surfdata, "Tair")
+    #sr.add_area_of_interest(aoi1)
+    #sr.add_area_of_interest(aoi2)
+    #sr.add_area_of_interest(aoi3)
+    #sr.set_output_folder("paraviewplus/figs")
+    #sr.show()
 
     # TIME SERIES DEMONSTRATION
     tsd = TimeSeriesDemonstration(
@@ -84,7 +77,10 @@ def main():
         airdata=airdata,
     )
 
-    tsd.add_variable("WindDirection") # TODO fix wind direction
+    tsd.add_variable("Tair")
+    tsd.add_variable("RelatHumid")
+    tsd.add_variable("WindSpeed")
+    tsd.add_variable("UTCI")
 
     #tsd.plot()
 
@@ -105,7 +101,7 @@ def main():
     sc.add_variable("UTCI")
     sc.add_simulation(surfdata2)
 
-    sc.show()
+    #sc.show()
 
 
 if __name__ == "__main__":
