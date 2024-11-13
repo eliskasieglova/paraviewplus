@@ -127,3 +127,26 @@ plt.show()
 ```
 ![image](https://github.com/user-attachments/assets/874b0885-0316-42d2-99a5-698e7a1937ff)
 
+
+### Plot LineString (Slice) on Map
+
+```
+
+    def plot_slice_on_map(self):
+        """ Plot map of the slice (from above). """
+
+        fig, ax = plt.subplots()
+
+        sc = ax.scatter(self.gdf.geometry.x, self.gdf.geometry.y, c=self.gdf.geometry.z, cmap="Spectral_r", s=1)
+        slice_gdf = gpd.GeoSeries([self.slice]) 
+        slice_gdf.plot(ax=ax, color='black', linewidth=2, label='Slice')
+
+        # Add a colorbar to the plot
+        cbar = plt.colorbar(sc, ax=ax)
+        cbar.set_label('Height (m)')  # You can change the label to describe what the color represents
+
+        plt.legend()
+        plt.title('Slice')
+
+        plt.show()
+```
