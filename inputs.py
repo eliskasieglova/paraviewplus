@@ -349,7 +349,7 @@ class SurfacePoints(DataPoints):
         if show:
             plt.show()
 
-    def _build_plot(self, simulation, aois, variable_name, colors=['blue', 'red', 'yellow', 'green'], show=False):
+    def _build_plot(self, simulation, aois, variable_name, colors, show=False):
         """
         Builds a plot of a specific variable over time for the defined areas of interest (AOIs) without displaying it.
         Prepares parameters for visualization (background grid, axis ticks and labels).

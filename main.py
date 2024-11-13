@@ -8,6 +8,7 @@ plt.rcParams.update({'font.family': 'DejaVu Sans'})
 from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose, Slice
 from inputs import VariableChars
 
+import customtkinter as ctk
 
 def main():
 
@@ -53,19 +54,31 @@ def main():
     slice = LineString([[25496100, 6672150], [25496300, 6671800]])
     sl = Slice(airpoints, airdata, slice, "Tair")
     sl.set_resolution(5)
-    #sl.plot()
+    sl.set_buffer(2)
+    sl.set_output_folder(output_folder)
+    #sl.export()
 
     # WINDROSE
     wr = Windrose(airpoints, airdata)
     wr.set_output_folder(output_folder)
-    #wr.run()
+    #wr.export()
+
+
+    # POWERPOINT PRESENTATION
+    #from pptmaker import PresentationMaker
+
+    #ppt = PresentationMaker()
+    #ppt.set_output_folder("paraviewplus")
+    #ppt.set_name("powerpoint_test")
+    #ppt.create_pptx()
+
 
     # SIMULATION RESULTS
-    #sr = SimulationResults(surfpoints, surfdata, "Tair")
-    #sr.add_area_of_interest(aoi1)
-    #sr.add_area_of_interest(aoi2)
-    #sr.add_area_of_interest(aoi3)
-    #sr.set_output_folder("paraviewplus/figs")
+    sr = SimulationResults(surfpoints, surfdata, "Tair")
+    sr.add_area_of_interest(aoi1)
+    sr.add_area_of_interest(aoi2)
+    sr.add_area_of_interest(aoi3)
+    sr.set_output_folder("paraviewplus/figs")
     #sr.show()
 
     # TIME SERIES DEMONSTRATION
@@ -84,24 +97,36 @@ def main():
 
     #tsd.plot()
 
-    #tsd.set_output_folder(output_folder)
+    tsd.set_output_folder(output_folder + "/timeseries")
     #tsd.export()
 
     # UTCI
     utci = UTCICategory(surfpoints, surfdata, surfmesh)
-    utci.add_category('moderate')
-
-    #utci.run()
+    utci.add_category('no')
+    utci.set_output_folder(output_folder)
+    #utci.export()
 
     # SIMULATION COMPARISON
-    sc = SimulationComparison(surfpoints, surfdata)
-    sc.add_aoi(aoi1)
-    sc.add_aoi(aoi2)
-    sc.add_variable("Tair")
-    sc.add_variable("UTCI")
-    sc.add_simulation(surfdata2)
-
+    #sc = SimulationComparison(surfpoints, surfdata)
+    #sc.add_aoi(aoi1)
+    #sc.add_aoi(aoi2)
+    #sc.add_variable("Tair")
+    #sc.add_variable("UTCI")
+    #sc.add_simulation(surfdata2)
+    #sc.set_output_folder(output_folder)
+    #sc.export()
     #sc.show()
+
+
+    root = ctk.CTk()
+    root.geometry("1200x400")
+    root.title("Main Window")
+    root.update()
+
+    plot_frame = sr.update_plot(root)
+    plot_frame.pack(side='top', fill='both', pady=8,padx=8)
+
+    root.mainloop()
 
 
 if __name__ == "__main__":

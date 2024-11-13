@@ -90,6 +90,7 @@ class AOIsOnMap(SurfacePoints, SurfaceMesh):
         self._create_plot()
         if self.output_folder is not None:
             plt.savefig(f"{self.output_folder}/aois_{self.plot_type}")
+            plt.close()
 
 class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableChars):
     """
@@ -290,6 +291,7 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
         for time in self.get_timesteps():
             self._create_plot(time)
             plt.savefig(f"{self.output_folder}/timeseries_{time}.png")
+            plt.close()
         
 class SimulationResults(SurfacePoints, VariableChars):
     """ Plots the simulation results for the chosen areas of interest in one plot for each selected variable. """
@@ -308,33 +310,11 @@ class SimulationResults(SurfacePoints, VariableChars):
         self.output_folder = None
 
         # plot visualization
-        self.colors = ['blue', 'red', 'yellow', 'green', 'brown', 'pink'][:len(self.areas_of_interest)]
+        self.colors = ['blue', 'red', 'yellow', 'green', 'brown', 'pink']
         self.title = self.get_title(self.variable_name)
         self.note = ""
 
         # tkinter window
-        self.root = ctk.CTk()
-        self.root.geometry("1200x400")
-        self.root.title("Main Window")
-        self.root.update()
-        self.frame = ctk.CTkFrame(master=self.root,
-                                  height= self.root.winfo_height()*0.66,
-                                  width = self.root.winfo_width()*0.95,
-                                  fg_color="darkblue")
-        self.frame.place(relx=0.33, rely=0.025)
-        self.input =  ctk.CTkEntry(master=self.root,
-                                   placeholder_text=100,
-                                   justify='center',
-                                   width=300,
-                                   height=50,
-                                   fg_color="darkblue")
-        self.input.insert(0,100)
-        self.input.place(relx=0.025,rely=0.5)
-
-        plot_frame = ctk.CTkFrame(self.root, width=1000, height=400)
-        plot_frame.grid(row=0, column=0, sticky="nsew")
-
-        self.fig, self.ax = plt.subplots(figsize=(12, 5), facecolor='#F2F2F2')
 
     def set_output_folder(self, output_folder):
         self.output_folder = output_folder
@@ -361,7 +341,10 @@ class SimulationResults(SurfacePoints, VariableChars):
     def set_color(self, idx, color):
         self.colors[idx] = color
 
-    def update_plot(self):
+    def get_colors(self):
+        return ['blue', 'red', 'yellow', 'green', 'brown', 'pink'][:len(self.areas_of_interest)]
+
+    def update_plot(self, master):
         """
         Generates and displays a plot for a single simulation variable over time for all AOIs.
 
@@ -373,30 +356,38 @@ class SimulationResults(SurfacePoints, VariableChars):
             A list of colors for the areas of interest (AOIs). Defaults to ['blue', 'red', 'yellow', 'green'].
         """
 
+        plot_frame = ctk.CTkFrame(master)
+
+        self.fig, self.ax = plt.subplots(figsize=(12, 5), facecolor='#F2F2F2')
+
+        colors = self.get_colors()
+
         # plot values
-        self._build_plot(self.surfdata, self.areas_of_interest, self.variable_name, colors=self.colors)
+        self._build_plot(self.surfdata, self.areas_of_interest, self.variable_name, colors=colors)
 
         # apply layouts
         self._apply_plot_layout(self.ax, self.variable_name)
         self._plot_legend(self.ax)
-        note = self._plot_note_text(self.variable_name)
+        self.note = self._plot_note_text(self.variable_name)
         self.ax.set_title(self.title, fontsize=18, fontweight='bold', y=1.1)
-        self.ax.set_title(self.set_title("ABCD"))
         plt.subplots_adjust(top=0.85, bottom=0.2)
 
-        canvas = FigureCanvasTkAgg(self.fig, master=self.root)
-        canvas.draw()
-        canvas.get_tk_widget().place(relx=0.05, rely=0.05)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=plot_frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack()
 
-        self.root.update()
+        #self.root.update()
 
-    def show(self):
-        self.update_plot()
-        self.root.mainloop()
+        return plot_frame
+
+    # def show(self):
+    #     self.update_plot()
+    #     self.root.mainloop()
 
     def export(self):
         self.plot()
         plt.savefig(f'{self.output_folder}/' + f'{self.variable_name}.png')  
+        plt.close()
     
     def exit(self):
         self.root.destroy()
@@ -439,7 +430,7 @@ class UTCICategory(SurfacePoints, SurfaceMesh):
         """ Remove category from list of categories to plot. """
         self.categories.remove(category)
 
-    def run(self):
+    def _create_plot(self, cat, time):
 
         # Define UTCI categories and plotting colors
         utci = {
@@ -450,29 +441,38 @@ class UTCICategory(SurfacePoints, SurfaceMesh):
             'no': {'bounds': (9, 26), 'color': 'lightgreen'}
         }
 
+
+        fig, ax = plt.subplots()
+
+        # extract area with UTCI according to selected temperature
+        temps = self.surfdata[["cell_ID", "UTCI", "Time"]].dropna()
+        temps = temps.where(temps["Time"] == time).dropna()
+
+        # merge csv with gpd
+        subset = gpd.GeoDataFrame(pd.merge(temps, self.surfpoints[["cell_ID", "geometry"]]))
+
+        # plot the UTCI category
+        contour = ax.tricontourf(subset.geometry.x, subset.geometry.y, subset.UTCI, levels=utci[cat]['bounds'], colors=utci[cat]["color"])
+
+        # plot the surface (walls)
+        self.walls.plot(ax=ax, edgecolor='black', linewidth=0.5)
+        self.rooftops.plot(ax=ax, edgecolor='black', linewidth=0.5, color='white')
+        ax.axis('off')
+        plt.title(f'UTCI: {cat} (hour {time})')
+
+    def export(self):
         for cat in self.categories:
-
             for time in self.get_timesteps():
+                self._create_plot(cat, time)
+                plt.savefig(self.output_folder + f"/utci/utci_{cat}_{time}.png")
+                plt.close()
 
-                fig, ax = plt.subplots()
+    def show(self):
+        cat = self.categories[0]
+        time = self.get_timesteps()[0]
+        self._create_plot(cat, time)
+        plt.show()
 
-                # extract area with UTCI according to selected temperature
-                temps = self.surfdata[["cell_ID", "UTCI", "Time"]].dropna()
-                temps = temps.where(temps["Time"] == time).dropna()
-
-                # merge csv with gpd
-                subset = gpd.GeoDataFrame(pd.merge(temps, self.surfpoints[["cell_ID", "geometry"]]))
-
-                # plot the UTCI category
-                contour = ax.tricontourf(subset.geometry.x, subset.geometry.y, subset.UTCI, levels=utci[cat]['bounds'], colors=utci[cat]["color"])
-
-                # plot the surface (walls)
-                self.walls.plot(ax=ax, edgecolor='black', linewidth=0.5)
-                self.rooftops.plot(ax=ax, edgecolor='black', linewidth=0.5, color='white')
-                ax.axis('off')
-                plt.title(f'UTCI: {cat} (hour {time})')
-                plt.show()
-    
 
 class SimulationComparison(SurfacePoints, VariableChars):
 
@@ -552,6 +552,7 @@ class SimulationComparison(SurfacePoints, VariableChars):
             for i, aoi in enumerate(self.aois):
                 self._create_plot(variable_name, aoi)
                 plt.savefig(f"{self.output_folder}/comparison_{variable_name}_area{self.letters[i]}.png")
+                plt.close()
 
     def show(self, variable_name="Tair", aoi=None):
         """ Function for showing the plot. """
@@ -643,14 +644,10 @@ class Windrose(AirPoints):
         # Add legend
         ax.set_legend(title="Wind Speed (m/s)", loc=self.legend_loc)
 
-        # Save the plot
-        plt.savefig(f"{self.output_folder}/windrose.png")
-
-        plt.show()
-
     def export(self):
         self._create_plot()
         plt.savefig(f"{self.output_folder}/windrose.png")
+        plt.close()
 
     def show(self):
         self._create_plot()
@@ -670,6 +667,9 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         self.variable_name = variable_name
 
         self.resolution = 10
+        self.buffer = 1
+
+        self.output_folder = ""
 
     def add_variable(self, variable_name):
         self.variable_list.append(variable_name)
@@ -677,17 +677,23 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
     def set_resolution(self, resolution):
         self.resolution = resolution
         
-    def _slice(self, line, b=1):
+    def set_output_folder(self, output_folder):
+        self.output_folder = output_folder
+    
+    def set_buffer(self, buffer):
+        self.buffer = buffer
+    
+    def _slice(self):
         """ Selects subset of the points along selected line. Works for both 2d and 3d. """
 
         # create a small buffer around line
-        buff = line.buffer(b)
+        buff = self.slice.buffer(self.buffer)
 
         # plot values along line
         points_along_line = self.gdf[self.gdf.within(buff)]
 
         # count distance from origin
-        points_along_line["dist_from_origin"] = [Point(line.coords[0]).distance(Point(point.x, point.y)) for point in points_along_line.geometry]
+        points_along_line["dist_from_origin"] = [Point(self.slice.coords[0]).distance(Point(point.x, point.y)) for point in points_along_line.geometry]
 
         return points_along_line
 
@@ -709,7 +715,7 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
 
         plt.show()
 
-    def plot_slice_3d(self, slice, show=True, variable_name=None):
+    def plot_slice_3d(self):
         """
         Plots a 3D scatterplot of air points and a slice surface. Colors the points by variable if selected.
 
@@ -730,16 +736,16 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
 
-        if variable_name is not None:
+        if self.variable_name is not None:
             data = pd.merge(self.gdf[["cell_ID"]], self.df)
             data = data[data["Time"] == 1]
 
-        sc = ax.scatter(self.gdf.geometry.x, self.gdf.geometry.y, self.gdf.geometry.z, s=1, c=data[variable_name] if variable_name is not None else 'black',
+        sc = ax.scatter(self.gdf.geometry.x, self.gdf.geometry.y, self.gdf.geometry.z, s=1, c=data[self.variable_name] if self.variable_name is not None else 'black',
                         cmap="Spectral_r")
 
         # plot 3d slice
-        slice_2d = gpd.GeoSeries([slice]) 
-        slice_coords = list(slice.coords) 
+        slice_2d = gpd.GeoSeries([self.slice]) 
+        slice_coords = list(self.slice.coords) 
         polygon_vertices = []
 
         # Create the bottom face of the polygon (min_z)
@@ -755,23 +761,22 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         ax.add_collection3d(poly)
 
         # Add a colorbar to the plot
-        if variable_name is not None:
+        if self.variable_name is not None:
             cbar = plt.colorbar(sc, ax=ax)
-            cbar.set_label(self.units[variable_name])  
+            cbar.set_label(self.units[self.variable_name])  
 
         # Set title
-        plt.title('3D Slice' if variable_name is None else f"{self.titles[variable_name]}: 3D Slice")
+        plt.title('3D Slice' if self.variable_name is None else f"{self.titles[self.variable_name]}: 3D Slice")
         ax.set_zlim(0, 150)
 
         # Save figure, show if selected
         plt.savefig("paraviewplus/figs/3dslice.png")
-        if show:
-            plt.show()
+        plt.show()
 
-    def plot(self):
+    def _create_plot(self):
 
         # Create slice and extract relevant points along the line
-        points_along_line = self._slice(self.slice, 10)
+        points_along_line = self._slice()
 
         # Merge gdf with df
         points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
@@ -850,6 +855,12 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         plt.xlabel('Distance from Origin')
         plt.ylabel('Height')
         plt.title(f'Plot of {self.variable_name} using Fishnet Grid')
-
-        plt.show()
         
+    def export(self):
+        self._create_plot()
+        plt.savefig(self.output_folder + f"/slice_{self.variable_name}.png")
+        plt.close()
+
+    def show(self):
+        self._create_plot
+        plt.show()            
