@@ -13,7 +13,11 @@ from shapely import LineString, Point
 import scipy.interpolate as interp
 import tkinter as tk
 import customtkinter as ctk
+from datetime import datetime
+
+
 from inputs import SurfaceMesh, AirPoints, SurfacePoints, VariableChars
+
 
 
 class AOIsOnMap(SurfacePoints, SurfaceMesh):
@@ -111,13 +115,15 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
         Surface mesh. (Ferda folder: surface_triangle_shp.shp)
     """
 
-    def __init__(self, surfpoints : gpd.GeoDataFrame, surfdata : pd.DataFrame, airpoints : gpd.GeoDataFrame, airdata : pd.DataFrame, surfmesh : gpd.GeoDataFrame) -> None:
+    def __init__(self, surfpoints : gpd.GeoDataFrame, surfdata : pd.DataFrame, airpoints : gpd.GeoDataFrame, airdata : pd.DataFrame, surfmesh : gpd.GeoDataFrame, 
+                 base_date : str) -> None:
 
         self.surfpoints = surfpoints
         self.surfdata = surfdata
         self.airpoints = airpoints
         self.airdata = airdata
         self.surfmesh = surfmesh
+        self.base_date = datetime.strptime(base_date, "%d.%m.%Y")
 
         SurfacePoints.__init__(self, self.surfpoints, self.surfdata)
         AirPoints.__init__(self, self.airpoints, self.airdata)
@@ -279,7 +285,11 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
                 plt.subplot(n, m, i+1) 
                 self._plot_time_series_sim(fig, ax, name, cmap, time)
 
-        plt.suptitle(f"Time: {time}", fontsize = 40)
+        from datetime import timedelta
+
+        new_datetime = self.base_date + timedelta(hours=int(time))
+
+        plt.suptitle(f"Date: {new_datetime.strftime("%d.%m.%Y")} Time: {new_datetime.hour}H{new_datetime.minute}M", fontsize = 40)
 
     def plot(self, time=7):
         """ Show the plot. """
@@ -440,7 +450,6 @@ class UTCICategory(SurfacePoints, SurfaceMesh):
             'moderate': {'bounds': (26, 32), 'color': 'orange'},
             'no': {'bounds': (9, 26), 'color': 'lightgreen'}
         }
-
 
         fig, ax = plt.subplots()
 
