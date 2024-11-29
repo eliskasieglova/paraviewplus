@@ -95,6 +95,22 @@ class SimTimeSeries(ctk.CTkFrame):
         self.aoi_frames = SizedScrollableFrame(self, height=80)
         self.aoi_frames.grid(row=6, column =0, columnspan=2, sticky='WE', padx=4, pady=4)
         
+        self.winter_checkbox_var = ctk.IntVar(value=0)
+        winter_checkbox = ctk.CTkCheckBox(self, text='Winter Time series',border_width = 2,variable=self.winter_checkbox_var, onvalue="on", offvalue="off", command= self.on_winter_check)
+        winter_checkbox.grid(row=7,column=0,sticky='W', padx=4, pady=(0,2))
+        
+        winter_frame = ctk.CTkFrame(self)
+        winter_frame.grid(row=8, column=0, columnspan=2, sticky="NSWE",padx=4, pady=(0,2))
+        
+        self.winter_time_series = WinterTimeSeries(winter_frame)
+        
+        
+    def on_winter_check(self):
+        if self.winter_checkbox_var.get() == 1:
+            self.winter_time_series.pack(side='top', fill='x', padx=4, pady=4)
+        else:
+            self.winter_time_series.pack_forget()
+        
     def set_aoi_frames(self, aoi_list):
         for i in range(len(aoi_list)):
           aoi_frame = AoI(self.aoi_frames.scrollable_frame, i +1)
@@ -316,9 +332,7 @@ class VariableConfigure(ctk.CTkFrame):
             self.simulation_time_series_frame = SimTimeSeries(mainframe)
             self.simulation_time_series_frame.pack(side='top', fill='x', padx=4, pady=4)
             
-        # if c1 == 'on':
-        #     winter_time_series = WinterTimeSeries(mainframe)
-        #     winter_time_series.pack(side='top', fill='x', padx=4, pady=4)
+
 
         if c2 == 'on':
             self.simulation_results = SimulationResults(mainframe)

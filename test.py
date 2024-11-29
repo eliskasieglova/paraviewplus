@@ -35,6 +35,10 @@ stuff to tell eliska:
 - replot when changing the time by only changing the colors
 - what is the buffer and resolution ranges in slices
 
+buffer
+
+resoluton 1-100
+
 
 for time series:
 - done - add the ability to see specific plots
