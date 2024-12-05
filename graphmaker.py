@@ -14,6 +14,7 @@ import scipy.interpolate as interp
 import tkinter as tk
 import customtkinter as ctk
 from datetime import datetime
+from shapely import Polygon, Point
 
 
 from inputs import SurfaceMesh, AirPoints, SurfacePoints, VariableChars
@@ -873,3 +874,106 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
     def show(self):
         self._create_plot
         plt.show()            
+
+
+class Frequency(SurfacePoints):
+    """
+    Class for creating a piechart (one area/point) or bar chart (more areas/points) showing the frequency (percentage) of 
+    timesteps when the selected variable goes over the selected threshold.
+    """
+
+    def __init__(self, gdf : gpd.GeoDataFrame, df : pd.DataFrame, variable_name : str):
+        super().__init__(gdf, df)
+        VariableChars.__init__(self)
+
+        self.gdf = gdf
+        self.df = df
+        self.variable_name = variable_name
+        self.threshold = 0
+        self.aois = []
+
+    def set_threshold(self, threshold):
+        # set new threshold for counting the frequency
+        self.threshold = threshold
+
+    def add_area_of_interest(self, aoi):
+        # append area of interest to list
+        self.aois.append(aoi)
+
+    def remove_area_of_interest(self, aoi):
+        # append area of interest to list
+        self.aois.remove(aoi)
+
+    def count_frequency(self, aoi):
+        # count how many times the chosen variable crossed the threshold
+
+        # if its a single point TODO better way to assess if its a point???
+        if type(aoi) == Point:
+            # create subset (aoi)        
+            cell_ID = self.gdf[self.gdf.within(aoi, align=True)]["cell_ID"].values[0]
+            values = self.df[self.df['cell_ID'] == cell_ID][self.variable_name].values
+
+        elif type(aoi) == Polygon:
+            # create subset (aoi)        
+            cell_IDs = self.gdf[self.gdf.within(aoi, align=True)]["cell_ID"].values.tolist()
+            subset = self.df[self.df['cell_ID'].isin(cell_IDs)].dropna()
+            cell_IDs = np.unique(subset['cell_ID'].values).tolist()  # reinitiate cell_IDs without nans
+
+            values = np.mean([subset[subset['cell_ID'] == id][self.variable_name].values for id in cell_IDs], axis=0)
+
+        frequency_l, frequency_u = 0, 0  # initiate frequency
+
+        # first find the ones lower
+        for value in values:
+            if value < self.threshold:
+                frequency_l = frequency_l + 1
+            if value >= self.threshold:
+                frequency_u = frequency_u + 1
+
+        return [frequency_l, frequency_u]
+
+    def pie_chart(self):
+        # for one aoi
+
+        aoi = self.aois[0]
+
+        labels = [f'< {self.threshold} °C', f'> {self.threshold} °C']
+        sizes = self.count_frequency(aoi)
+        colors = ["darkblue", "darkred"]
+
+        fig, ax = plt.subplots()
+        ax.pie(sizes, labels=labels, colors=colors)
+
+        plt.show()
+
+    def bar_plot(self):
+        # for more aois
+
+        fig, ax = plt.subplots()
+        labels = [f'{"Point" if type(aoi) == Point else "Area"} {i+1}' for i, aoi in enumerate(self.aois)]
+
+        counts = []
+        for aoi in self.aois:
+            frequency_u = self.count_frequency(aoi)[1]
+            counts.append(frequency_u)
+
+        ax.bar(labels, counts, color='darkred')
+
+        ax.set_ylabel('count')
+        ax.set_title(f'Frequency of {self.get_title(self.variable_name)} > {self.threshold} {self.get_units(self.variable_name)} \n out of {len(self.get_timesteps())} Time Steps')
+
+        plt.show()
+
+    def run(self):
+
+        if self.aois == 1:
+            self.pie_chart(type="aois")
+        
+        elif self.aois > 1:
+            self.bar_plot(type="aois")
+
+    # TODO 
+    #  create pie chart from single point
+    #  create bar chart for more points
+    #  create function for single area of interest (pie chart)
+    #  create function for several areas of interest (bar chart)

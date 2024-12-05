@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
-from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose, Slice
+from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose, Slice, Frequency
 from inputs import VariableChars
 
 import customtkinter as ctk
@@ -50,6 +50,15 @@ def main():
     varchars = VariableChars()
     varchars.add_variable("ET")
 
+    # FREQUENCY
+    fr = Frequency(gdf=surfpoints, df=surfdata, variable_name="Tair")
+    fr.set_threshold(20)
+    fr.add_area_of_interest(aoi1)
+    fr.add_area_of_interest(surfpoints.iloc[10].geometry)
+    fr.add_area_of_interest(aoi2)
+    fr.pie_chart()
+    fr.bar_plot()
+
     # SLICE
     slice = LineString([[25496100, 6672150], [25496300, 6671800]])
     sl = Slice(airpoints, airdata, slice, "Tair")
@@ -62,16 +71,6 @@ def main():
     wr = Windrose(airpoints, airdata)
     wr.set_output_folder(output_folder)
     #wr.export()
-
-
-    # POWERPOINT PRESENTATION
-    #from pptmaker import PresentationMaker
-
-    #ppt = PresentationMaker()
-    #ppt.set_output_folder("paraviewplus")
-    #ppt.set_name("powerpoint_test")
-    #ppt.create_pptx()
-
 
     # SIMULATION RESULTS
     sr = SimulationResults(surfpoints, surfdata, "Tair")
@@ -88,6 +87,7 @@ def main():
         surfmesh=surfmesh,
         surfdata=surfdata,
         airdata=airdata,
+        base_date="30.7.2018"
     )
 
     tsd.add_variable("Tair")
@@ -102,9 +102,9 @@ def main():
 
     # UTCI
     utci = UTCICategory(surfpoints, surfdata, surfmesh)
-    utci.add_category('no')
+    utci.add_category('moderate')
     utci.set_output_folder(output_folder)
-    #utci.export()
+    utci.export()
 
     # SIMULATION COMPARISON
     #sc = SimulationComparison(surfpoints, surfdata)
@@ -126,7 +126,7 @@ def main():
     plot_frame = sr.update_plot(root)
     plot_frame.pack(side='top', fill='both', pady=8,padx=8)
 
-    root.mainloop()
+    #root.mainloop()
 
 
 if __name__ == "__main__":

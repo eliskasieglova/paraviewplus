@@ -1,6 +1,7 @@
 import geopandas as gpd
 import pandas as pd
 import numpy as np
+import os
 from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -664,6 +665,8 @@ class SurfaceMesh():
 
     
     def _classify_surfaces(self):
+
+
 
         outpath = Path("paraviewplus/cache")
 
