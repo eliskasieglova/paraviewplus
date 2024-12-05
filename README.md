@@ -240,5 +240,8 @@ Areas of interest can be shapely polygons or shapely points. If it is a single p
 
 **Result**:
 
-![image](https://github.com/user-attachments/assets/bb02547c-8433-416e-953c-f8e72de6000e)
+![piechart_tair](https://github.com/user-attachments/assets/b9ff4b8f-8c7e-4d70-8497-55e61f0a9b42)
+![barplot_tair](https://github.com/user-attachments/assets/d6c791f8-0428-4005-b5c9-a90d91fbdecd)
+
+
 
