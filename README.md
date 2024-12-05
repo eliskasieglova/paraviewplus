@@ -222,7 +222,8 @@ Plotting windrose with default values for colormap and levels (bins) which can b
 
 ## Frequency
 
-Plotting frequency of temperatures over given threshold.
+Plotting frequency of temperatures over given threshold. Generates pie chart for single area of interest/point. Generates bar plot for more points/areas of interest. 
+Areas of interest can be shapely polygons or shapely points. If it is a single point, the algorithm selectes 3 closest points and plots the average of these.
 ```
     # WINDROSE
     fr = Frequency(gdf=surfpoints, df=surfdata, variable_name="Tair")
