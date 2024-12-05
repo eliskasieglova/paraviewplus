@@ -25,8 +25,7 @@ Each of the analysis types has its own class. The classes have functions that ca
 - [UTCICategory](#utci_category) --> plots time series of selected UTCI category (only the selected category is shown on map). creates one figure for each timestep.
 - [AOIsOnMap](#map-of-areas-of-interest) --> plots polygons of areas of interest over map (either point map or mesh)
 - [Windrose](#windrose) --> plots wind rose (wind directions and wind speeds of the whole area)
-
-
+- [Frequency](#frequency) --> plots the frequency of temperatures over certain threshold
   
 # Examples
 
@@ -221,4 +220,24 @@ Plotting windrose with default values for colormap and levels (bins) which can b
 ![image](https://github.com/user-attachments/assets/bb02547c-8433-416e-953c-f8e72de6000e)
 
 
+## Frequency
+
+Plotting frequency of temperatures over given threshold.
+```
+    # WINDROSE
+    fr = Frequency(gdf=surfpoints, df=surfdata, variable_name="Tair")
+    fr.set_threshold(26)
+    fr.add_area_of_interest(aoi1)
+    fr.add_area_of_interest(surfpoints.iloc[10].geometry)
+    fr.add_area_of_interest(aoi2)
+    fr.add_area_of_interest(aoi3)
+    fr.add_area_of_interest(aoi4)
+    fr.pie_chart()
+    fr.bar_plot()
+
+```
+
+**Result**:
+
+![image](https://github.com/user-attachments/assets/bb02547c-8433-416e-953c-f8e72de6000e)
 
