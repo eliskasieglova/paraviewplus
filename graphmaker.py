@@ -878,8 +878,8 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
 
 class Frequency(SurfacePoints):
     """
-    Class for creating a piechart (one area/point) or bar chart (more areas/points) showing the frequency (percentage) of 
-    timesteps when the selected variable goes over the selected threshold.
+    Class for creating visualizations (pie chart or bar chart) that show the frequency (percentage) of 
+    time steps when the selected variable exceeds a given threshold.
     """
 
     def __init__(self, gdf : gpd.GeoDataFrame, df : pd.DataFrame, variable_name : str):
@@ -890,90 +890,92 @@ class Frequency(SurfacePoints):
         self.df = df
         self.variable_name = variable_name
         self.threshold = 0
-        self.aois = []
+        self.aois = []  # List of Areas of Interest (AOIs)
+        self.output_folder = ""  # Output folder for saving charts
 
     def set_threshold(self, threshold):
-        # set new threshold for counting the frequency
+        """Set the threshold for counting the frequency."""
         self.threshold = threshold
 
     def add_area_of_interest(self, aoi):
-        # append area of interest to list
+        """Add an area of interest (AOI) to the list."""
         self.aois.append(aoi)
 
     def remove_area_of_interest(self, aoi):
-        # append area of interest to list
+        """Remove an area of interest (AOI) from the list."""
         self.aois.remove(aoi)
 
+    def set_output_folder(self, output_folder):
+        """Set the output folder for saving charts."""
+        self.output_folder = output_folder
+
     def count_frequency(self, aoi):
-        # count how many times the chosen variable crossed the threshold
+        """
+        Count the number of time steps where the variable exceeds the threshold.
+        Returns a list: [count_below_threshold, count_above_threshold].
+        """
 
-        # if its a single point TODO better way to assess if its a point???
-        if type(aoi) == Point:
-            # create subset (aoi)        
-            cell_ID = self.gdf[self.gdf.within(aoi, align=True)]["cell_ID"].values[0]
-            values = self.df[self.df['cell_ID'] == cell_ID][self.variable_name].values
-
-        elif type(aoi) == Polygon:
-            # create subset (aoi)        
-            cell_IDs = self.gdf[self.gdf.within(aoi, align=True)]["cell_ID"].values.tolist()
-            subset = self.df[self.df['cell_ID'].isin(cell_IDs)].dropna()
-            cell_IDs = np.unique(subset['cell_ID'].values).tolist()  # reinitiate cell_IDs without nans
-
-            values = np.mean([subset[subset['cell_ID'] == id][self.variable_name].values for id in cell_IDs], axis=0)
-
-        frequency_l, frequency_u = 0, 0  # initiate frequency
-
-        # first find the ones lower
-        for value in values:
-            if value < self.threshold:
-                frequency_l = frequency_l + 1
-            if value >= self.threshold:
-                frequency_u = frequency_u + 1
+        if isinstance(aoi, Point):
+            # Handle AOI as a single point
+            cell_id = self.gdf[self.gdf.geometry.within(aoi)] ["cell_ID"].values[0]
+            values = self.df[self.df['cell_ID'] == cell_id][self.variable_name].values
+        elif isinstance(aoi, Polygon):
+            # Handle AOI as a polygon
+            cell_ids = self.gdf[self.gdf.geometry.within(aoi)]["cell_ID"].values.tolist()
+            subset = self.df[self.df['cell_ID'].isin(cell_ids)].dropna()
+            values = subset.groupby('cell_ID')[self.variable_name].mean().values
+        else:
+            raise ValueError("AOI must be a Point or Polygon.")
+        
+        frequency_l = sum(value < self.threshold for value in values)
+        frequency_u = sum(value >= self.threshold for value in values)
 
         return [frequency_l, frequency_u]
 
     def pie_chart(self):
-        # for one aoi
-
+        """Create a pie chart for a single AOI."""
         aoi = self.aois[0]
 
+        if isinstance(aoi, Point):
+            # Expand point to a small polygon buffer
+            aoi_buffer = aoi.buffer(10)
+            points_within_buffer = self.gdf[self.gdf.geometry.within(aoi_buffer)]
+            points_within_buffer['distance'] = points_within_buffer.geometry.distance(aoi)
+            nearest_3 = points_within_buffer.nsmallest(3, 'distance')
+            aoi = Polygon(list(nearest_3.geometry)).buffer(0.00001)
+    
         labels = [f'< {self.threshold} °C', f'> {self.threshold} °C']
-        sizes = self.count_frequency(aoi)
+        sizes = self.count_frequency(aoi)  # count frequency
         colors = ["darkblue", "darkred"]
 
         fig, ax = plt.subplots()
         ax.pie(sizes, labels=labels, colors=colors)
 
-        plt.show()
-
     def bar_plot(self):
-        # for more aois
+        """Create a bar chart for multiple AOIs."""
+        labels = [f'Area {i+1}' for i in range(len(self.aois))]
+        counts = [self.count_frequency(aoi)[1] for aoi in self.aois]
 
         fig, ax = plt.subplots()
-        labels = [f'{"Point" if type(aoi) == Point else "Area"} {i+1}' for i, aoi in enumerate(self.aois)]
-
-        counts = []
-        for aoi in self.aois:
-            frequency_u = self.count_frequency(aoi)[1]
-            counts.append(frequency_u)
-
         ax.bar(labels, counts, color='darkred')
-
-        ax.set_ylabel('count')
-        ax.set_title(f'Frequency of {self.get_title(self.variable_name)} > {self.threshold} {self.get_units(self.variable_name)} \n out of {len(self.get_timesteps())} Time Steps')
-
-        plt.show()
+        ax.set_ylabel('Count Above Threshold')
+        ax.set_title(f'Frequency of {self.get_title(self.variable_name)} > {self.threshold} {self.get_units(self.variable_name)}')
 
     def run(self):
+        """Display the appropriate chart based on the number of AOIs."""
+        if len(self.aois) == 1:
+            self.pie_chart()
+        elif len(self.aois) > 1:
+            self.bar_plot()
+        plt.show()
 
-        if self.aois == 1:
-            self.pie_chart(type="aois")
-        
-        elif self.aois > 1:
-            self.bar_plot(type="aois")
+    def export(self):
+        """Save the appropriate chart to the output folder."""
+        if not self.output_folder:
+            raise ValueError("Output folder is not set.")
 
-    # TODO 
-    #  create pie chart from single point
-    #  create bar chart for more points
-    #  create function for single area of interest (pie chart)
-    #  create function for several areas of interest (bar chart)
+        if len(self.aois) == 1:
+            self.pie_chart()
+        elif len(self.aois) > 1:
+            self.bar_plot()
+        plt.savefig(f'{self.output_folder}/chart.png')
