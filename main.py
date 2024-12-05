@@ -52,12 +52,15 @@ def main():
 
     # FREQUENCY
     fr = Frequency(gdf=surfpoints, df=surfdata, variable_name="Tair")
-    fr.set_threshold(20)
-    fr.add_area_of_interest(aoi1)
+    fr.set_threshold(26)
+    #fr.add_area_of_interest(aoi1)
     fr.add_area_of_interest(surfpoints.iloc[10].geometry)
     fr.add_area_of_interest(aoi2)
-    fr.pie_chart()
-    fr.bar_plot()
+    fr.add_area_of_interest(aoi3)
+    fr.add_area_of_interest(aoi4)
+    fr.run()
+    fr.set_output_folder(output_folder)
+    fr.export()
 
     # SLICE
     slice = LineString([[25496100, 6672150], [25496300, 6671800]])
