@@ -979,3 +979,103 @@ class Frequency(SurfacePoints):
         elif len(self.aois) > 1:
             self.bar_plot()
         plt.savefig(f'{self.output_folder}/chart.png')
+
+
+class ComparisonMap(SurfacePoints, AirPoints, VariableChars, SurfaceMesh):
+
+    def __init__(self, gdf : gpd.GeoDataFrame, df : pd.DataFrame):
+        super().__init__(gdf, df)
+
+        VariableChars.__init__(self)
+
+        self.gdf = gdf
+        self.simulations = []
+        self.slice = slice
+        self.variable_name = "Tair"
+
+        self.resolution = 10
+        self.buffer = 1
+
+        self.output_folder = ""
+
+        self.simulations.append(df)
+
+        self.walls, self.rooftops = self._walls_rooftops()
+
+    def set_variable(self, variable_name):
+        self.variable_name = variable_name
+
+    def add_simulation(self, simulation : pd.DataFrame):
+        self.simulations.append(simulation)
+
+    def remove_simulation(self, idx):
+        self.simulations.remove(self.simulations[idx])
+
+    def set_output_folder(self, output_folder):
+        self.output_folder = output_folder
+
+    def _create_plot(self, fig, axs):
+
+        for i, sim in enumerate(self.simulations):
+            ax = axs[i]
+
+            # plot data
+            self._plot_map(fig, ax, self.variable_name, time=14, walls=self.walls, rooftops=self.rooftops, cmap="Spectral")
+            
+        return
+    
+    def _walls_rooftops(self):
+        """ 
+        Check if walls and rooftop files exist. If not, create walls and rooftop files. 
+        Uses the function _classify_surfaces() from SurfaceMesh.
+        """
+
+        walls, ground, rooftops = self._classify_surfaces()
+
+        return walls, rooftops  # TODO make this more effective also together with timeseriesdemonstration
+
+    def run(self):
+
+        l = len(self.simulations)
+
+        if l == 0:
+            pass
+
+        elif l == 1:
+            fig, axs = plt.subplots()
+            #self._create_plot(fig, axs)
+
+        elif l == 2:
+            fig, axs = plt.subplots(2, 1)
+            #self._create_plot(fig, axs)
+
+        elif l == 3:
+            fig, axs = plt.subplots(3, 1)
+            #self._create_plot(fig, axs)
+
+        elif l == 4:
+            fig, axs = plt.subplots(2, 2)
+            #self._create_plot(fig, axs)
+
+        elif l == 5:
+            fig, axs = plt.subplots(3, 2)
+            #self._create_plot(fig, axs)
+
+        elif l == 6:
+            fig, axs = plt.subplots(3, 2)
+            #self._create_plot(fig, axs)
+
+        self._create_plot(fig, [i for ax in axs for i in ax])
+
+        plt.show()
+
+
+
+
+
+
+
+
+
+
+

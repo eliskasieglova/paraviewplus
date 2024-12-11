@@ -409,7 +409,7 @@ class SurfacePoints(DataPoints):
         
         return
     
-    def _plot_time_series_sim(self, fig, ax, variable_name, cmap, time, walls, rooftops, airpoints=None, airdata=None):
+    def _plot_map(self, fig, ax, variable_name, cmap, time, walls, rooftops, airpoints=None, airdata=None):
 
         if airpoints is not None:
             merged = gpd.GeoDataFrame(pd.merge(airdata, airpoints[["cell_ID", "geometry"]])).dropna()
@@ -458,19 +458,19 @@ class SurfacePoints(DataPoints):
 
             # first plot --> air temperature
             plt.subplot(2, 2, 1) 
-            self._plot_time_series_sim(fig, axs[0, 0], "Tair", 'coolwarm', time, walls, rooftops)
+            self._plot_map(fig, axs[0, 0], "Tair", 'coolwarm', time, walls, rooftops)
 
             # second subplot --> relative humidity
             plt.subplot(2, 2, 2)
-            self._plot_time_series_sim(fig, axs[0, 1], "RelatHumid", 'Purples', time, walls, rooftops)
+            self._plot_map(fig, axs[0, 1], "RelatHumid", 'Purples', time, walls, rooftops)
 
             # third subplot --> wind speed
             plt.subplot(2, 2, 3)
-            self._plot_time_series_sim(fig, axs[1, 0], "WindSpeed", 'Blues', time, walls, rooftops, airpoints=airpoints, airdata=airdata)
+            self._plot_map(fig, axs[1, 0], "WindSpeed", 'Blues', time, walls, rooftops, airpoints=airpoints, airdata=airdata)
 
             # fourth subplot --> utci
             plt.subplot(2, 2, 4)
-            self._plot_time_series_sim(fig, axs[1, 1], "UTCI", ListedColormap(['green', 'orange', 'orangered', 'red', 'darkred']),
+            self._plot_map(fig, axs[1, 1], "UTCI", ListedColormap(['green', 'orange', 'orangered', 'red', 'darkred']),
                                         time, walls, rooftops)
 
             plt.suptitle(f"Time: {time}", fontsize = 40)
@@ -665,8 +665,6 @@ class SurfaceMesh():
 
     
     def _classify_surfaces(self):
-
-
 
         outpath = Path("paraviewplus/cache")
 

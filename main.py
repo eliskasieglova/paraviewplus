@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
-from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose, Slice, Frequency
+from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose, Slice, Frequency, ComparisonMap
 from inputs import VariableChars
 
 import customtkinter as ctk
@@ -23,6 +23,12 @@ def main():
     surfdata2 = surfdata.copy()
     surfdata2["Tair"] = [x + 2 for x in surfdata["Tair"].values]
     surfdata2["UTCI"] = [x + 2 for x in surfdata["UTCI"].values]
+
+    surfdata3 = surfdata.copy()
+    surfdata3["Tair"] = [x + 4 for x in surfdata["Tair"].values]
+
+    surfdata4 = surfdata.copy()
+    surfdata4["Tair"] = [x + 6 for x in surfdata["Tair"].values]
 
     aoi1 = Polygon(((25496100, 6672050), (25496115, 6672000), (25496215, 6672070), (25496190, 6672100), (25496100, 6672050)))
     aoi2 = Polygon(((25496200, 6672050), (25496215, 6672000), (25496315, 6672070), (25496290, 6672100), (25496200, 6672050)))
@@ -50,6 +56,14 @@ def main():
     varchars = VariableChars()
     varchars.add_variable("ET")
 
+    # MAP COMPARISON
+    mc = ComparisonMap(surfpoints, surfdata)
+    mc.set_variable("Tair")
+    mc.add_simulation(surfdata2)
+    mc.add_simulation(surfdata3)
+    mc.add_simulation(surfdata4)
+    mc.run()
+
     # FREQUENCY
     fr = Frequency(gdf=surfpoints, df=surfdata, variable_name="Tair")
     fr.set_threshold(26)
@@ -58,9 +72,9 @@ def main():
     fr.add_area_of_interest(aoi2)
     fr.add_area_of_interest(aoi3)
     fr.add_area_of_interest(aoi4)
-    fr.run()
+    #fr.run()
     fr.set_output_folder(output_folder)
-    fr.export()
+    #fr.export()
 
     # SLICE
     slice = LineString([[25496100, 6672150], [25496300, 6671800]])
