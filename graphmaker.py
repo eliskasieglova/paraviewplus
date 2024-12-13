@@ -1014,13 +1014,55 @@ class ComparisonMap(SurfacePoints, AirPoints, VariableChars, SurfaceMesh):
     def set_output_folder(self, output_folder):
         self.output_folder = output_folder
 
-    def _create_plot(self, fig, axs):
+    def _create_plot(self, fig, axs, time):
+        
+        # set colormap for the whole thing
+        cmap = self.get_cmap(self.variable_name)
 
+        # set mins aand maxs for the whole thing
+        all_values = pd.concat([d[self.variable_name] for d in self.simulations])
+        #min_value = 10 * (min(all_values) // 10)
+        #max_value = 10 * (max(all_values) // 10)
+
+        min_value = min(all_values)
+        max_value = max(all_values)
+        
         for i, sim in enumerate(self.simulations):
             ax = axs[i]
 
             # plot data
-            self._plot_map(fig, ax, self.variable_name, time=14, walls=self.walls, rooftops=self.rooftops, cmap="Spectral")
+            self._plot_map(fig, ax, self.variable_name, time=time, walls=self.walls, rooftops=self.rooftops, cmap=cmap)
+            
+            merged = gpd.GeoDataFrame(pd.merge(self.df, self.gdf[["cell_ID", "geometry"]])).dropna()
+            subset = merged[merged["Time"] == time]
+
+            # plot the surface
+            import matplotlib.tri as tri
+            triang = tri.Triangulation(subset.geometry.x, subset.geometry.y)
+            if self.variable_name == "UTCI":
+                levels = [9, 26, 32, 38, 46, 50]  # levels same as ticks for utci
+                ticks = levels
+                norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
+                contour = ax.tricontourf(triang, subset[self.variable_name], levels=levels, cmap=cmap, norm=norm)
+            else: 
+                if self.variable_name == "Tair":
+                    levels = np.arange(min_value, max_value + 1, 1)
+                    ticks = np.arange(min_value, max_value + 1, 5)
+                elif self.variable_name == "WindSpeed":
+                    levels = np.arange(min_value, max_value + 1, 1)
+                    ticks = np.arange(min_value, max_value + 1, 5)
+                elif self.variable_name == "RelatHumid":
+                    levels = np.arange(0, 1.1, 0.1)
+                    ticks = np.arange(0, 1.1, 0.2)
+
+                contour = ax.tricontourf(triang, subset[self.variable_name], levels=levels, cmap=cmap)
+            
+                # plot the buildings (walls)
+                self.walls.plot(ax=ax, edgecolor='black', linewidth=0.5)
+                self.rooftops.plot(ax=ax, edgecolor='black', linewidth=0.5, color='white')
+
+            #self._layout_time_series_sim(fig, ax, contour, levels, ticks, self.variable_name)
+
             
         return
     
@@ -1042,30 +1084,37 @@ class ComparisonMap(SurfacePoints, AirPoints, VariableChars, SurfaceMesh):
             pass
 
         elif l == 1:
-            fig, axs = plt.subplots()
+            n, m = 1, 1
+            #fig, axs = plt.subplots()
             #self._create_plot(fig, axs)
 
         elif l == 2:
-            fig, axs = plt.subplots(2, 1)
+            n, m = 2, 1
+            #fig, axs = plt.subplots(2, 1)
             #self._create_plot(fig, axs)
 
         elif l == 3:
-            fig, axs = plt.subplots(3, 1)
+            n, m = 3, 1
+            #fig, axs = plt.subplots(3, 1)
             #self._create_plot(fig, axs)
 
         elif l == 4:
-            fig, axs = plt.subplots(2, 2)
+            n, m = 2, 2
+            #fig, axs = plt.subplots(2, 2)
             #self._create_plot(fig, axs)
 
         elif l == 5:
-            fig, axs = plt.subplots(3, 2)
+            n, m = 3, 2
+            #fig, axs = plt.subplots(3, 2)
             #self._create_plot(fig, axs)
 
         elif l == 6:
-            fig, axs = plt.subplots(3, 2)
+            n, m = 3, 2
+            #fig, axs = plt.subplots(3, 2)
             #self._create_plot(fig, axs)
 
-        self._create_plot(fig, [i for ax in axs for i in ax])
+        fig, axs = plt.subplots(n, m)
+        self._create_plot(fig, [i for ax in axs for i in ax], time=12)
 
         plt.show()
 
