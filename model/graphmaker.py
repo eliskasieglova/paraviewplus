@@ -1020,6 +1020,7 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
 
         self.resolution = 10
         self.buffer = 1
+        self.time = 12
 
         self.output_folder = ""
 
@@ -1125,8 +1126,8 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         plt.savefig("paraviewplus/figs/3dslice.png")
         plt.show()
 
-    def _create_plot(self, master):
-
+    def _create_plot_data(self):
+        
         # Create slice and extract relevant points along the line
         points_along_line = self._slice()
 
@@ -1134,9 +1135,8 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         points_along_line = points_along_line[["cell_ID", "geometry", "dist_from_origin"]]
         merged = pd.merge(points_along_line, self.df, how="left", on="cell_ID")
 
-        # Filter data for the selected time
-        time = 1
-        subset = merged[merged["Time"] == time].sort_values("dist_from_origin").copy()
+        # Filter data for the selected time 
+        subset = merged[merged["Time"] == self.time].sort_values("dist_from_origin").copy()
 
         # Create bounding box around the data points to cover the area with the fishnet
         min_x, min_y, max_x, max_y = (
@@ -1183,7 +1183,7 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         self.fishnet_gdf = pd.merge(self.fishnet_gdf, fishnet_avg, left_index=True, right_on='index_right', how='right')
 
         # colormap
-        cmap = plt.get_cmap(self.get_cmap(self.variable_name))
+        self.cmap = plt.get_cmap(self.get_cmap(self.variable_name))
 
         # Normalize the variable values for color mapping
         self.min_value = self.fishnet_gdf[self.variable_name].min()
@@ -1191,17 +1191,23 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         self.norm = plt.Normalize(vmin=self.min_value, vmax=self.max_value)
 
         # Assign colors based on variable_name using vmin and vmax for normalization
-        self.fishnet_gdf["color"] = [cmap((value - self.min_value) / (self.max_value - self.min_value)) for value in self.fishnet_gdf[self.variable_name].values]
+        self.fishnet_gdf["color"] = [self.cmap((value - self.min_value) / (self.max_value - self.min_value)) for value in self.fishnet_gdf[self.variable_name].values]
+
+        return self.fishnet_gdf["color"]
+
+    def _create_plot(self, master):
+        
+        data = self._create_plot_data()
 
         plot_frame = ctk.CTkFrame(master)
 
         # Plot the fishnet grid colored by the average heights
         self.fig, self.ax = plt.subplots(facecolor='#F2F2F2')
         self.fishnet_gdf = self.fishnet_gdf.set_geometry('geometry')
-        self.fishnet_gdf.plot(ax=self.ax, color=self.fishnet_gdf['color'], legend=True)
+        self.fishnet_gdf.plot(ax=self.ax, color=data, legend=True)
 
         # Add a colorbar to the plot
-        self.sm = plt.cm.ScalarMappable(cmap=cmap, norm=self.norm)
+        self.sm = plt.cm.ScalarMappable(cmap=self.cmap, norm=self.norm)
         self.sm.set_array([])  # We don't need to set actual data here
         self.cbar = self.fig.colorbar(self.sm, ax=self.ax, shrink=0.5)
 
@@ -1217,6 +1223,34 @@ class Slice(AirPoints, SurfacePoints, VariableChars):
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
         
         return plot_frame
+    
+    def update_plot(self):
+        # Recreate the plot data
+        data = self._create_plot_data()
+
+        # Clear the existing plot from the axis
+        self.ax.clear()
+
+        # Replot the fishnet grid with updated data
+        self.fishnet_gdf = self.fishnet_gdf.set_geometry('geometry')
+        self.fishnet_gdf.plot(ax=self.ax, color=data, legend=True)
+
+        # Add the colorbar to the plot
+        if hasattr(self, 'cbar'):
+            self.cbar.remove()  # Remove the previous colorbar
+        self.sm = plt.cm.ScalarMappable(cmap=self.cmap, norm=self.norm)
+        self.sm.set_array([])  # No actual data is needed here
+        self.cbar = self.fig.colorbar(self.sm, ax=self.ax, shrink=0.5)
+
+        # Add plot labels and title again
+        self.ax.set_xlabel('Distance from Origin')
+        self.ax.set_ylabel('Height')
+        self.ax.set_title(self.title_content)
+
+        self.fig.tight_layout(rect=[0, 0, 1, 0.95])  # Optional: adjust the rect to fit colorbar and title
+
+        # Redraw the canvas to reflect changes
+        self.canvas.draw() 
    
     def set_new_title(self, text):
         self.title_content = text

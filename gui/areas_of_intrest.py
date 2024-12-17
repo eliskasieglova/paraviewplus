@@ -92,14 +92,11 @@ class AreaOfIntrest(ctk.CTkFrame):
     def __init__(self, master, shp_path):
         super().__init__(master, fg_color='transparent')
 
-        self.shp_path = shp_path
+        gdf = shp_path
         
         self.parent = master
         # Set the protocol to handle window close event
         #self.protocol("WM_DELETE_WINDOW", self.on_closing)
-
-        # Load the shapefile
-        gdf = gpd.read_file(self.shp_path)
 
         # Create new height column
         gdf['height'] = gdf.geometry.apply(lambda geom: np.mean([coord[2] for coord in geom.exterior.coords if len(coord) == 3]))
@@ -122,6 +119,7 @@ class AreaOfIntrest(ctk.CTkFrame):
         
         self.aoi_counts = 0
         self.aoi_frames = {}
+        self.aoi_list = [] # this is returnable to higher classes
         
         # Initialize variables for tracking polygon points and states
         self.dots = []
@@ -178,6 +176,9 @@ class AreaOfIntrest(ctk.CTkFrame):
         redo_image = ctk.CTkImage(Image.open('icons/redo_icon.png'), size=(20, 20))
         self.redo_button = ctk.CTkButton(draw_tool_frame,text='', image=redo_image, corner_radius=6, fg_color='#E5E5E5', width=20, state='disabled', command=self.redo_line)
         self.redo_button.pack(side='left', pady=2)
+        
+        title_label = ctk.CTkLabel(draw_tool_frame, text='Areas Of Intrest', font=('bold', 16))
+        title_label.pack(side='left', pady=2, fill='x', expand=True)
         
         
         plot_frame = ctk.CTkFrame(extended_plot_frame, fg_color='transparent')
@@ -265,11 +266,14 @@ class AreaOfIntrest(ctk.CTkFrame):
             last = self.all_polygons[-1]
             last1 = next(iter(last.values()))
             last2 = ', '.join(map(str,last1)) 
-            aoi_frame.insert_data(last2) 
+            aoi_frame.insert_data(last2)
+            self.aoi_list.append(last2) 
             self.parent.aoi_list.append(last2)     
         
         self.aoi_frames[self.aoi_counts] = aoi_frame
 
+    def get_aoi_list(self):
+        return self.aoi_list
 
     
     # Function to start drawing mode with the button
