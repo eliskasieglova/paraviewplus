@@ -3,12 +3,15 @@ import pandas as pd
 from shapely import LineString, Polygon
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+from pathlib import Path
 plt.rcParams.update({'font.family': 'DejaVu Sans'})
 
 from graphmaker import SimulationResults, TimeSeriesDemonstration, UTCICategory, SimulationComparison, AOIsOnMap, Windrose, Slice, Frequency, ComparisonMap
 from inputs import VariableChars
 
 import customtkinter as ctk
+
 
 def main():
 
@@ -62,8 +65,11 @@ def main():
     mc.add_simulation(surfdata2)
     mc.add_simulation(surfdata3)
     mc.add_simulation(surfdata4)
-    mc.run()
-
+    mc.set_time(1)
+    mc.set_output_folder(output_folder)
+    #mc.run()
+    mc.export()
+    
     # FREQUENCY
     fr = Frequency(gdf=surfpoints, df=surfdata, variable_name="Tair")
     fr.set_threshold(26)
@@ -108,8 +114,6 @@ def main():
     )
 
     tsd.add_variable("Tair")
-    tsd.add_variable("RelatHumid")
-    tsd.add_variable("WindSpeed")
     tsd.add_variable("UTCI")
 
     #tsd.plot()
@@ -121,7 +125,7 @@ def main():
     utci = UTCICategory(surfpoints, surfdata, surfmesh)
     utci.add_category('moderate')
     utci.set_output_folder(output_folder)
-    utci.export()
+    #utci.export()
 
     # SIMULATION COMPARISON
     #sc = SimulationComparison(surfpoints, surfdata)

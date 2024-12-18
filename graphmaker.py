@@ -15,10 +15,24 @@ import tkinter as tk
 import customtkinter as ctk
 from datetime import datetime
 from shapely import Polygon, Point
+import os
 
 
 from inputs import SurfaceMesh, AirPoints, SurfacePoints, VariableChars
 
+def create_folder_structure():
+
+    cachepath = Path("cache/")
+    if not cachepath.exists():
+        os.mkdir(cachepath)
+
+    figspath = Path("figs/")
+    if not cachepath.exists():
+        os.mkdir(figspath)
+
+    datapath = Path("data/")
+    if not datapath.exists():
+        os.mkdir(datapath)
 
 
 class AOIsOnMap(SurfacePoints, SurfaceMesh):
@@ -92,6 +106,7 @@ class AOIsOnMap(SurfacePoints, SurfaceMesh):
 
     def export(self):
         """ Export the plot. """
+
         self._create_plot()
         if self.output_folder is not None:
             plt.savefig(f"{self.output_folder}/aois_{self.plot_type}")
@@ -137,11 +152,21 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
         self.output_folder = None
         self.vars = []
 
+        self.time = 1
+
     def add_variable(self, variable_name):
+        if len(self.vars) > 4:
+            raise ValueError("Only a max of 4 variables is allowed, if you want more, change the code..")
         self.vars.append(variable_name)
 
     def set_output_folder(self, output_folder):
         self.output_folder = output_folder
+
+    def set_time(self, time):
+        if time not in self.get_timesteps():
+            raise ValueError(f"Selected time not in timesteps!! You selected {time} but timesteps are: {self.get_timesteps()}")
+        else:
+            self.time = time
     
     def _walls_rooftops(self):
         """ 
@@ -184,7 +209,7 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
         
         return
     
-    def _plot_time_series_sim(self, fig, ax, variable_name, cmap, time):
+    def _plot_time_series_sim(self, fig, ax, variable_name, cmap):
         """
         Plots one subplot of the time series simulation based on the inputs.
 
@@ -199,10 +224,10 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
 
         if variable_name in self.surfdata.columns:
             merged = gpd.GeoDataFrame(pd.merge(self.surfdata, self.surfpoints[["cell_ID", "geometry"]])).dropna()
-            subset = merged[merged["Time"] == time]
+            subset = merged[merged["Time"] == self.time]
         else:
             merged = gpd.GeoDataFrame(pd.merge(self.airdata, self.airpoints[["cell_ID", "geometry"]])).dropna()
-            subset = merged[merged["Time"] == time]
+            subset = merged[merged["Time"] == self.time]
 
         # plot the surface
         import matplotlib.tri as tri
@@ -213,7 +238,7 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
             norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
             contour = ax.tricontourf(triang, subset[variable_name], levels=levels, cmap=cmap, norm=norm)
         elif variable_name == "WindDirection":
-            self.plot_windflow(time)
+            self.plot_windflow(self.time)
         else: 
             if variable_name == "WindSpeed":
                 min_value = 5 * (min(merged[variable_name]) // 5)
@@ -243,38 +268,37 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
 
         return
     
-    def _create_plot(self, time):
+    def _create_plot(self):
         """
         Runs the visualization for each timestep in the surface data, plotting
         multiple variables in a 2x2 subplot layout.
         TODO redo this to being adjustable (vars, subplots etc)
         """
-        figsize = (9, 9)
 
         if len(self.vars) == 1:
             # setup
-            fig, ax = plt.subplots(figsize=figsize)
+            fig, ax = plt.subplots(figsize=(9, 9))
             name = self.vars[0]
             cmap = self.get_cmap(self.vars[0])
             #cmap = self.cmaps[0]
             # run
-            self._plot_time_series_sim(fig, ax, name, cmap, time)
+            self._plot_time_series_sim(fig, ax, name, cmap)
 
         else: 
             if len(self.vars) == 2:
                 # setup
                 n, m = (1, 2)
-                fig, axs = plt.subplots(n, m, figsize=figsize)
+                fig, axs = plt.subplots(n, m, figsize=(16, 9))
                 ax_list = [axs[0], axs[1]]
 
             elif len(self.vars) == 3:
                 n, m  = (1, 3)
-                fig, axs = plt.subplots(n, m, figsize=figsize)
+                fig, axs = plt.subplots(n, m, figsize=(9, 9))
                 ax_list = [axs[0], axs[1], axs[2]]
 
             elif len(self.vars) == 4:
                 n, m = (2, 2)
-                fig, axs = plt.subplots(n, m, figsize=figsize)
+                fig, axs = plt.subplots(n, m, figsize=(9, 9))
                 ax_list = [axs[0, 0], axs[0, 1], axs[1, 0], axs[1, 1]]
 
             # plot selected variables
@@ -284,24 +308,25 @@ class TimeSeriesDemonstration(SurfaceMesh, SurfacePoints, AirPoints, VariableCha
                 ax = ax_list[i]
                 # plot
                 plt.subplot(n, m, i+1) 
-                self._plot_time_series_sim(fig, ax, name, cmap, time)
+                self._plot_time_series_sim(fig, ax, name, cmap)
 
         from datetime import timedelta
 
-        new_datetime = self.base_date + timedelta(hours=int(time))
+        new_datetime = self.base_date + timedelta(hours=int(self.time))
 
         plt.suptitle(f"Date: {new_datetime.strftime("%d.%m.%Y")} Time: {new_datetime.hour}H{new_datetime.minute}M", fontsize = 40)
 
-    def plot(self, time=7):
+    def plot(self):
         """ Show the plot. """
-        self._create_plot(time)
+        self._create_plot()
         plt.show()
 
     def export(self):
         """ Save the plot as figure in output folder. """
         for time in self.get_timesteps():
-            self._create_plot(time)
-            plt.savefig(f"{self.output_folder}/timeseries_{time}.png")
+            self.time = time
+            self._create_plot()
+            plt.savefig(f"{self.output_folder}/timeseries_{self.time}.png")
             plt.close()
         
 class SimulationResults(SurfacePoints, VariableChars):
@@ -991,31 +1016,108 @@ class ComparisonMap(SurfacePoints, AirPoints, VariableChars, SurfaceMesh):
         self.gdf = gdf
         self.simulations = []
         self.slice = slice
-        self.variable_name = "Tair"
+        self.variable_name = "Tair"  # variable name for plotting, default Tair but changable with set_variable()
 
         self.resolution = 10
         self.buffer = 1
 
-        self.output_folder = ""
+        self.output_folder = ""  # output folder for export, changable with set_output_folder()
 
-        self.simulations.append(df)
+        self.simulations.append(df)  # append first simulation, add more with add_simulation(), max number of simulations is 6
+
+        self.time = 1
 
         self.walls, self.rooftops = self._walls_rooftops()
 
+        # plt specification
+        self.cmap = ""
+        self.min_value = 0
+        self.max_value = 56
+
+        self.ax_list = []
+
+        base_date="30.7.2018"
+
+    def set_cmap(self, cmap):
+        self.cmap = cmap
+
+    def set_min_value(self, all_values):
+        self.min_value = 10 * (min(all_values) // 10)
+
+    def set_max_value(self, all_values):
+        self.max_value = 10 * (max(all_values) // 10)
+
     def set_variable(self, variable_name):
+        # set variable (default "Tair")
         self.variable_name = variable_name
 
+    def set_ax_list(self):
+        self.ax_list = [i for ax in self.axs for i in ax]
+
+    def set_time(self, time):
+        if time not in self.get_timesteps():
+            raise ValueError(f"Selected time not in timesteps!! You selected {time} but timesteps are: {self.get_timesteps()}")
+        else:
+            self.time = time
+
     def add_simulation(self, simulation : pd.DataFrame):
-        self.simulations.append(simulation)
+        # add another simulation 
+        if len(self.simulations) > 6:
+            raise ValueError("Maximum of 6 simulations for comparison is allowed, otherwise you have to add more if statements to 'create_plot()'")
+        else:
+            self.simulations.append(simulation)
 
     def remove_simulation(self, idx):
+        # remove simulation based on id (position in list)
         self.simulations.remove(self.simulations[idx])
 
     def set_output_folder(self, output_folder):
+        # set output folder - has to be done for export
         self.output_folder = output_folder
 
-    def _create_plot(self, fig, axs, time):
+    def set_title(self):
+        plt.suptitle(f"Time: {self.time}")
+
+    def _create_plot_layout(self):
+        l = len(self.simulations)
+
+        # create figure with subplots based on number of simulations
+        if l == 0:
+            pass
+        elif l == 1:
+            n, m = 1, 1
+        elif l == 2:
+            n, m = 2, 1
+        elif l == 3:
+            n, m = 3, 1
+        elif l == 4:
+            n, m = 2, 2
+        elif l == 5:
+            n, m = 3, 2
+        elif l == 6:
+            n, m = 3, 2
+
+        self.fig, self.axs = plt.subplots(n, m)
+        self.set_ax_list()  # convert the ndarray of axes to a list
+
+    def add_cbar(self):
+        # add custom colorbar based on input data
+        cbar = self.fig.colorbar(self.contour, ax=self.axs, orientation='vertical', shrink=0.8, aspect=30, ticks=self.ticks)  # add and position cbar
+        cbar.ax.tick_params(labelsize=8)  # tick parameters (font size)
+        cbar.ax.set_ylabel(self.get_title(self.variable_name), fontsize=8) #rotation=-90, labelpad=9)   # optional turn of label
+
+        cbar.outline.set_visible(False)  # turn off black background of cbar
         
+        return
+
+    def _create_plot(self):
+        """
+        Create plot 
+        """
+
+        # initiate plot layout
+        self._create_plot_layout()
+
         # set colormap for the whole thing
         cmap = self.get_cmap(self.variable_name)
 
@@ -1024,47 +1126,65 @@ class ComparisonMap(SurfacePoints, AirPoints, VariableChars, SurfaceMesh):
         #min_value = 10 * (min(all_values) // 10)
         #max_value = 10 * (max(all_values) // 10)
 
-        min_value = min(all_values)
-        max_value = max(all_values)
-        
-        for i, sim in enumerate(self.simulations):
-            ax = axs[i]
+        self.set_min_value(all_values)
+        self.set_max_value(all_values)
+        self.set_cmap(cmap)
 
-            # plot data
-            self._plot_map(fig, ax, self.variable_name, time=time, walls=self.walls, rooftops=self.rooftops, cmap=cmap)
+        # loop through the uploaded simulations
+        for i in range(len(self.simulations)):
+            ax = self.ax_list[i]  # take according axis from the list
             
-            merged = gpd.GeoDataFrame(pd.merge(self.df, self.gdf[["cell_ID", "geometry"]])).dropna()
-            subset = merged[merged["Time"] == time]
+            # plot walls and rooftops
+            self.walls.plot(ax=ax, edgecolor='black', linewidth=0.5, zorder=2)  # zorder puts this above the variable
+            self.rooftops.plot(ax=ax, edgecolor='black', linewidth=0.5, color='white', zorder=3)  # zorder puts this above the variable and the walls
+
+            # set title of plot
+            self.set_title()
+
+            # fill the plot with data (based on variable)
+            self.update_plot()
+
+            # Remove the axes
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_frame_on(False)
+
+        # add cbar
+        self.add_cbar()
+
+    def update_plot(self):
+        """
+        Update existing plot by adding the data based on the selected variable. The plot should already be created in create_plot() together
+        with plotting the buildings (walls and rooftops).
+        """
+        # loop through simulations
+        for i, sim in enumerate(self.simulations):
+            ax = self.ax_list[i]  # select axis from list of axes (generated in when creating plot layout)
+
+            # merge the simulation with the geodataframe TODO could be a better way to do this?
+            merged = gpd.GeoDataFrame(pd.merge(sim[["cell_ID", self.variable_name, "Time"]], self.gdf[["cell_ID", "geometry"]])).dropna()
+            subset = merged[merged["Time"] == self.time]  # select subset for the selected timestep
 
             # plot the surface
             import matplotlib.tri as tri
             triang = tri.Triangulation(subset.geometry.x, subset.geometry.y)
             if self.variable_name == "UTCI":
-                levels = [9, 26, 32, 38, 46, 50]  # levels same as ticks for utci
-                ticks = levels
-                norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
-                contour = ax.tricontourf(triang, subset[self.variable_name], levels=levels, cmap=cmap, norm=norm)
+                self.levels = [9, 26, 32, 38, 46, 50]  # levels same as ticks for utci
+                self.ticks = self.levels
+                norm = BoundaryNorm(self.levels, ncolors=self.cmap.N, clip=True)
+                self.contour = ax.tricontourf(triang, subset[self.variable_name], levels=self.levels, cmap=self.cmap, norm=norm, zorder=1)
             else: 
                 if self.variable_name == "Tair":
-                    levels = np.arange(min_value, max_value + 1, 1)
-                    ticks = np.arange(min_value, max_value + 1, 5)
+                    self.levels = np.arange(self.min_value, self.max_value + 1, 1)
+                    self.ticks = np.arange(self.min_value, self.max_value + 1, 5)
                 elif self.variable_name == "WindSpeed":
-                    levels = np.arange(min_value, max_value + 1, 1)
-                    ticks = np.arange(min_value, max_value + 1, 5)
+                    self.levels = np.arange(self.min_value, self.max_value + 1, 1)
+                    self.ticks = np.arange(self.min_value, self.max_value + 1, 5)
                 elif self.variable_name == "RelatHumid":
-                    levels = np.arange(0, 1.1, 0.1)
-                    ticks = np.arange(0, 1.1, 0.2)
+                    self.levels = np.arange(0, 1.1, 0.1)
+                    self.ticks = np.arange(0, 1.1, 0.2)
 
-                contour = ax.tricontourf(triang, subset[self.variable_name], levels=levels, cmap=cmap)
-            
-                # plot the buildings (walls)
-                self.walls.plot(ax=ax, edgecolor='black', linewidth=0.5)
-                self.rooftops.plot(ax=ax, edgecolor='black', linewidth=0.5, color='white')
-
-            #self._layout_time_series_sim(fig, ax, contour, levels, ticks, self.variable_name)
-
-            
-        return
+                self.contour = ax.tricontourf(triang, subset[self.variable_name], levels=self.levels, cmap=self.cmap, zorder=1)
     
     def _walls_rooftops(self):
         """ 
@@ -1077,46 +1197,32 @@ class ComparisonMap(SurfacePoints, AirPoints, VariableChars, SurfaceMesh):
         return walls, rooftops  # TODO make this more effective also together with timeseriesdemonstration
 
     def run(self):
-
-        l = len(self.simulations)
-
-        if l == 0:
-            pass
-
-        elif l == 1:
-            n, m = 1, 1
-            #fig, axs = plt.subplots()
-            #self._create_plot(fig, axs)
-
-        elif l == 2:
-            n, m = 2, 1
-            #fig, axs = plt.subplots(2, 1)
-            #self._create_plot(fig, axs)
-
-        elif l == 3:
-            n, m = 3, 1
-            #fig, axs = plt.subplots(3, 1)
-            #self._create_plot(fig, axs)
-
-        elif l == 4:
-            n, m = 2, 2
-            #fig, axs = plt.subplots(2, 2)
-            #self._create_plot(fig, axs)
-
-        elif l == 5:
-            n, m = 3, 2
-            #fig, axs = plt.subplots(3, 2)
-            #self._create_plot(fig, axs)
-
-        elif l == 6:
-            n, m = 3, 2
-            #fig, axs = plt.subplots(3, 2)
-            #self._create_plot(fig, axs)
-
-        fig, axs = plt.subplots(n, m)
-        self._create_plot(fig, [i for ax in axs for i in ax], time=12)
-
+        """ Create and show the plot. """
+        self._create_plot()
         plt.show()
+
+    def update(self):
+        """ Update data in existing plot without loading walls and rooftops again. """
+        self.update_plot()
+        self.set_title()
+        #plt.show()
+
+    def export(self):
+        """ Export plots for all existing timesteps. """
+
+        # create directory if it doesn't exist yet
+        dir = Path(f"{self.output_folder}/comparison_time_series/")
+        if not dir.exists():
+            os.mkdir(dir)
+
+        # create and export the plots
+        for time in self.get_timesteps():
+            self.time = time
+            self._create_plot()
+            plt.savefig(dir / Path(f"comparisontimeseries_{self.time}.png"))
+            plt.close()  # close so that the memory does not get overloaded
+
+        
 
 
 
